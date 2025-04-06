@@ -1,0 +1,108 @@
+﻿img#link_preview_icon {
+    border: 0px solid blue;
+    width: 20px;
+    height: 20px;
+    position: fixed;
+    -moz-opacity:0.20;
+    display: block !important;
+    z-index: 2147483647;
+}
+
+div#lprv_frame {
+    border: thin solid gray;
+    top: 0px;
+    right: 0px !important;
+    width: 60%;
+    min-width: 400px;
+    height: 100%;
+    position: fixed;
+    z-index: 2147483647;
+}
+
+div#lprv_vresize {
+    width: 3px;
+    height: 100%;
+    cursor: w-resize;
+    position: absolute;
+}
+
+iframe#lprv_content {
+    border: none;
+    width: 100%;
+    height: calc(100% - 30px);
+    background-color: white;
+}
+
+
+.lprv_toolbar {
+    display: flex;
+    justify-content: flex-start;
+    background:url('moz-extension://__MSG_@@extension_id__/images/toolbar-fill-white.png')  repeat-x;
+    height: 30px;
+}
+
+.lprv_btn_group {
+    position: relative;
+    display: inline-flex;
+    vertical-align: middle;
+    margin: 1px;
+    margin-left: 30px;
+}
+
+.lprv_btn_group > .lprv_btn {
+    border-radius: .5rem;
+    height: 28px;
+    width: 40px;
+    border: 1px solid gray;
+    background-color: transparent;
+
+    background-repeat: no-repeat !important;
+    background-position: center center !important;
+    background-size: 40% !important;
+
+}
+.lprv_btn_group > .lprv_btn:hover {
+    box-shadow: inset 0 0 0 100px rgba(36, 70, 105, 0.1);
+}
+.lprv_btn_group > .lprv_btn:active {
+    box-shadow: inset 0 0 0 100px rgba(36, 70, 105, 0.4);
+}
+
+.lprv_btn_group > .lprv_btn:first-child:not(:last-child) {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+.lprv_btn_group > .lprv_btn:last-child:not(:first-child) {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left: 0px;
+}
+
+.lprv_btn_group#pin {
+    margin-left: auto;
+}
+
+.lprv_toolbar #logo {
+    background:url('moz-extension://__MSG_@@extension_id__/images/logo.png') no-repeat center center;
+    background-size: 70%;
+    width:32px;
+}
+
+.lprv_toolbar #back{
+    background:url('moz-extension://__MSG_@@extension_id__/images/arrow-left.svg');
+}
+.lprv_toolbar #forward {
+    background:url('moz-extension://__MSG_@@extension_id__/images/arrow-right.svg');
+}
+.lprv_toolbar #open_tab {
+    background:url('moz-extension://__MSG_@@extension_id__/images/new-tab.svg');
+}
+.lprv_toolbar #push-pin {
+    background:url('moz-extension://__MSG_@@extension_id__/images/push-pin.svg');
+}
+.lprv_toolbar #push-pin[locked=yes] {
+    box-shadow: inset 0 0 .25rem #000000;
+}
+.lprv_toolbar #hide {
+    background:url('moz-extension://__MSG_@@extension_id__/images/hide.svg');
+}
