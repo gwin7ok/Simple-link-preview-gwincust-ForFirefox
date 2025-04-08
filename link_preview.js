@@ -64,19 +64,22 @@ class PreviewIcon {
         icon.addEventListener("mouseout", this._on_mouseout.bind(this))
         return icon
     }
-    _getIconPosition(cursorX, cursorY){
-        const offsetX = 20
-        const offsetY = 10
-        const pos_trsh = 20
-        let posX = cursorX + offsetX
-        if (posX + pos_trsh > window.innerWidth){
-            posX -= offsetX * 2
+    _getIconPosition(cursorX, cursorY) {
+        const offsetX = -20; // 左方向にオフセット
+        const offsetY = -10; // 上方向にオフセット
+        const pos_trsh = 20;
+
+        let posX = cursorX + offsetX;
+        if (posX - pos_trsh < 0) {
+            posX += Math.abs(offsetX) * 2; // 画面外に出ないよう調整
         }
-        let posY = cursorY + offsetY
-        if (posY + pos_trsh > window.innerHeight){
-            posY -= offsetY * 2
+
+        let posY = cursorY + offsetY;
+        if (posY - pos_trsh < 0) {
+            posY += Math.abs(offsetY) * 2; // 画面外に出ないよう調整
         }
-        return {x:posX, y:posY}
+
+        return { x: posX, y: posY };
     }
     _on_mouseover(e){
         this.hide_timer.stop()
