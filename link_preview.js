@@ -64,19 +64,22 @@ class PreviewIcon {
         icon.addEventListener("mouseout", this._on_mouseout.bind(this))
         return icon
     }
-    _getIconPosition(cursorX, cursorY){
-        const offsetX = 20
-        const offsetY = 10
-        const pos_trsh = 20
-        let posX = cursorX + offsetX
-        if (posX + pos_trsh > window.innerWidth){
-            posX -= offsetX * 2
+    _getIconPosition(cursorX, cursorY) {
+        const offsetX = -20; // 左方向にオフセット
+        const offsetY = -10; // 上方向にオフセット
+        const pos_trsh = 20;
+
+        let posX = cursorX + offsetX;
+        if (posX - pos_trsh < 0) {
+            posX += Math.abs(offsetX) * 2; // 画面外に出ないよう調整
         }
-        let posY = cursorY + offsetY
-        if (posY + pos_trsh > window.innerHeight){
-            posY -= offsetY * 2
+
+        let posY = cursorY + offsetY;
+        if (posY - pos_trsh < 0) {
+            posY += Math.abs(offsetY) * 2; // 画面外に出ないよう調整
         }
-        return {x:posX, y:posY}
+
+        return { x: posX, y: posY };
     }
     _on_mouseover(e){
         this.hide_timer.stop()
@@ -103,9 +106,12 @@ class PreviewFrame {
     }
 
     show(url) {
-        this.url = url
-        this.show_timer.start()
-        this.hide_timer.stop()
+        this.url = url;
+        this.show_timer.start();
+        this.hide_timer.stop();
+
+        // body要素の右マージンを設定
+        document.body.style.marginRight = '800px'; // プレビューウィンドウの幅に合わせて調整
     }
     _show() {
         this._display = true;
@@ -122,8 +128,11 @@ class PreviewFrame {
     }
     _hide() {
         this._display = false;
-        this.iframe.src = "about:blank"
+        this.iframe.src = "about:blank";
         this.frame.style.visibility = 'hidden';
+
+        // body要素の右マージンをリセット
+        document.body.style.marginRight = '0';
     }
     update(url) {
         this.url = url
@@ -267,20 +276,25 @@ function on_link_mouseout(e) {
 }
 */
 function on_link_mouseover_doc(e) {
-    if (e.target.nodeName == 'A'){
-        let url = e.target.href
-//console.log(url)
-        if (preview_frame.display) {
-            preview_frame.update(url)
-        } else {
-            preview_icon.show(url, e.clientX, e.clientY)
+    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
+
+    browser.storage.local.get("previewEnabled").then((data) => {
+        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
+        if (!data.previewEnabled) return;
+
+        if (e.target.nodeName == 'A') {
+            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
+            let url = e.target.href;
+            if (preview_frame.display) {
+                preview_frame.update(url);
+            } else {
+                preview_icon.show(url, e.clientX, e.clientY);
+            }
+        } else if (e.type == "mouseover") {
+            let parent = { target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY };
+            on_link_mouseover_doc(parent);
         }
-    }
-    else if (e.type == "mouseover") { // иногда ловится вложенная в link нода img или div. Проверяем родителя
-         let parent = {target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY}
-//console.log(parent)
-        on_link_mouseover_doc(parent)
-    }
+    });
 }
 
 function on_link_mouseout_doc(e) {
@@ -291,3 +305,22 @@ function on_link_mouseout_doc(e) {
     }
 }
 
+// link_preview.js
+function on_link_mouseover_doc(e) {
+    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
+
+    browser.storage.local.get("previewEnabled").then((data) => {
+        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
+        if (!data.previewEnabled) return;
+
+        if (e.target.nodeName == 'A') {
+            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
+            let url = e.target.href;
+            if (preview_frame.display) {
+                preview_frame.update(url);
+            } else {
+                preview_icon.show(url, e.clientX, e.clientY);
+            }
+        }
+    });
+}
