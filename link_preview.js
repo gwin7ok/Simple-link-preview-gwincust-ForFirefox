@@ -276,20 +276,25 @@ function on_link_mouseout(e) {
 }
 */
 function on_link_mouseover_doc(e) {
-    if (e.target.nodeName == 'A'){
-        let url = e.target.href
-//console.log(url)
-        if (preview_frame.display) {
-            preview_frame.update(url)
-        } else {
-            preview_icon.show(url, e.clientX, e.clientY)
+    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
+
+    browser.storage.local.get("previewEnabled").then((data) => {
+        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
+        if (!data.previewEnabled) return;
+
+        if (e.target.nodeName == 'A') {
+            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
+            let url = e.target.href;
+            if (preview_frame.display) {
+                preview_frame.update(url);
+            } else {
+                preview_icon.show(url, e.clientX, e.clientY);
+            }
+        } else if (e.type == "mouseover") {
+            let parent = { target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY };
+            on_link_mouseover_doc(parent);
         }
-    }
-    else if (e.type == "mouseover") { // иногда ловится вложенная в link нода img или div. Проверяем родителя
-         let parent = {target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY}
-//console.log(parent)
-        on_link_mouseover_doc(parent)
-    }
+    });
 }
 
 function on_link_mouseout_doc(e) {
@@ -300,3 +305,22 @@ function on_link_mouseout_doc(e) {
     }
 }
 
+// link_preview.js
+function on_link_mouseover_doc(e) {
+    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
+
+    browser.storage.local.get("previewEnabled").then((data) => {
+        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
+        if (!data.previewEnabled) return;
+
+        if (e.target.nodeName == 'A') {
+            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
+            let url = e.target.href;
+            if (preview_frame.display) {
+                preview_frame.update(url);
+            } else {
+                preview_icon.show(url, e.clientX, e.clientY);
+            }
+        }
+    });
+}

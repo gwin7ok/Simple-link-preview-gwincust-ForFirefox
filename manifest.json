@@ -1,1 +1,42 @@
-{"manifest_version": 2, "name": "Simple link preview", "version": "1.1.4resigned1", "description": "Preview links without leaving your current page.", "icons": {"64": "images/logo_big.png"}, "content_scripts": [{"matches": ["<all_urls>"], "js": ["link_preview.js"], "css": ["link_preview.css"]}], "background": {"scripts": ["ignore-frame-options.js"]}, "web_accessible_resources": ["images/*.png", "images/*.svg"], "permissions": ["storage", "webRequest", "webRequestBlocking", "<all_urls>"], "applications": {"gecko": {"id": "{1274ac2c-6015-4975-acb0-976dadad6b35}", "strict_min_version": "54.0"}}}
+{
+  "manifest_version": 2,
+  "name": "Simple link preview",
+  "version": "1.1.4resigned1",
+  "description": "Preview links without leaving your current page.",
+  "icons": {
+    "64": "images/logo_big.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["link_preview.js"],
+      "css": ["link_preview.css"]
+    }
+  ],
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "web_accessible_resources": ["images/*.png", "images/*.svg"],
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>",
+    "storage",
+    "activeTab"
+  ],
+  "browser_action": {
+    "default_icon": {
+      "16": "images/icon16.png",
+      "48": "images/icon48.png",
+      "128": "images/icon128.png"
+    },
+    "default_title": "リンクプレビューの切り替え"
+  },
+  "applications": {
+    "gecko": {
+      "id": "{1274ac2c-6015-4975-acb0-976dadad6b35}",
+      "strict_min_version": "54.0"
+    }
+  }
+}
