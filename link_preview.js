@@ -103,9 +103,12 @@ class PreviewFrame {
     }
 
     show(url) {
-        this.url = url
-        this.show_timer.start()
-        this.hide_timer.stop()
+        this.url = url;
+        this.show_timer.start();
+        this.hide_timer.stop();
+
+        // body要素の右マージンを設定
+        document.body.style.marginRight = '800px'; // プレビューウィンドウの幅に合わせて調整
     }
     _show() {
         this._display = true;
@@ -122,8 +125,11 @@ class PreviewFrame {
     }
     _hide() {
         this._display = false;
-        this.iframe.src = "about:blank"
+        this.iframe.src = "about:blank";
         this.frame.style.visibility = 'hidden';
+
+        // body要素の右マージンをリセット
+        document.body.style.marginRight = '0';
     }
     update(url) {
         this.url = url
