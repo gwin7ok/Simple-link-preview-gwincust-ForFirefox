@@ -34,13 +34,13 @@ function updateIcon(enabled) {
 // コンテキストメニューを作成
 browser.menus.create({
     id: "open-options",
-    title: "設定を開く",
-    contexts: ["browser_action"]
+    title: "オプション",
+    contexts: ["browser_action"] // ツールバーアイコンの右クリックメニューに表示
 });
 
 // メニュークリック時の処理
 browser.menus.onClicked.addListener((info) => {
     if (info.menuItemId === "open-options") {
-        browser.runtime.openOptionsPage();
+        browser.runtime.openOptionsPage(); // オプションページを開く
     }
 });

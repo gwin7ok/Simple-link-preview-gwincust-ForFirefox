@@ -19,9 +19,7 @@
   },
   "web_accessible_resources": ["images/*.png", "images/*.svg"],
   "permissions": [
-    "webRequest",
-    "webRequestBlocking",
-    "<all_urls>",
+    "menus",
     "storage",
     "activeTab"
   ],
