@@ -6,6 +6,8 @@ const DEFAULT_SETTINGS = {
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
+    ignoreXFrameOptions: false,
+    ignoreContentSecurityPolicy: false,
     debugMode: false // デバッグモードのデフォルト値
 };
 
@@ -38,6 +40,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('frame-display-time').value = settings.frameDisplayTime || DEFAULT_SETTINGS.frameDisplayTime;
         document.getElementById('frame-update-time').value = settings.frameUpdateTime || DEFAULT_SETTINGS.frameUpdateTime;
         document.getElementById('debug-mode').checked = settings.debugMode || DEFAULT_SETTINGS.debugMode;
+        document.getElementById('ignore-x-frame-options').checked = settings.ignoreXFrameOptions;
+        document.getElementById('ignore-content-security-policy').checked = settings.ignoreContentSecurityPolicy;
     });
 
     // 設定を保存する
@@ -50,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const frameDisplayTime = parseInt(document.getElementById('frame-display-time').value, 10);
         const frameUpdateTime = parseInt(document.getElementById('frame-update-time').value, 10);
         const debugMode = document.getElementById('debug-mode').checked;
+        const ignoreXFrameOptions = document.getElementById('ignore-x-frame-options').checked;
+        const ignoreContentSecurityPolicy = document.getElementById('ignore-content-security-policy').checked;
 
         browser.storage.local.set({
             iconDisplayDelay,
@@ -59,7 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
             frameDisplayDelay,
             frameDisplayTime,
             frameUpdateTime,
-            debugMode
+            debugMode,
+            ignoreXFrameOptions,
+            ignoreContentSecurityPolicy
         }).then(() => {
             const status = document.getElementById('status');
             status.textContent = '設定を保存しました！';
@@ -72,7 +80,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 frameDisplayDelay,
                 frameDisplayTime,
                 frameUpdateTime,
-                debugMode
+                debugMode,
+                ignoreXFrameOptions,
+                ignoreContentSecurityPolicy
             });
         });
     });

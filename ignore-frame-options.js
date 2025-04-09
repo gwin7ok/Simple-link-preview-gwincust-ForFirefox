@@ -17,39 +17,41 @@ let contentSecurityPolicyListener = null;
 
 // リスナーを登録する関数
 function enableListeners() {
-    if (!xFrameOptionsListener) {
-        debugLog("Enabling X-Frame-Options listener");
-        xFrameOptionsListener = (details) => {
-            debugLog("Intercepted headers (X-Frame-Options):", details.responseHeaders);
-            const headers = details.responseHeaders.filter(
-                (header) => header.name.toLowerCase() !== "x-frame-options"
+    browser.storage.local.get(["ignoreXFrameOptions", "ignoreContentSecurityPolicy"]).then((settings) => {
+        if (settings.ignoreXFrameOptions && !xFrameOptionsListener) {
+            debugLog("Enabling X-Frame-Options listener");
+            xFrameOptionsListener = (details) => {
+                debugLog("Intercepted headers (X-Frame-Options):", details.responseHeaders);
+                const headers = details.responseHeaders.filter(
+                    (header) => header.name.toLowerCase() !== "x-frame-options"
+                );
+                debugLog("Modified headers (X-Frame-Options):", headers);
+                return { responseHeaders: headers };
+            };
+            browser.webRequest.onHeadersReceived.addListener(
+                xFrameOptionsListener,
+                { urls: ["<all_urls>"] },
+                ["blocking", "responseHeaders"]
             );
-            debugLog("Modified headers (X-Frame-Options):", headers);
-            return { responseHeaders: headers };
-        };
-        browser.webRequest.onHeadersReceived.addListener(
-            xFrameOptionsListener,
-            { urls: ["<all_urls>"] },
-            ["blocking", "responseHeaders"]
-        );
-    }
+        }
 
-    if (!contentSecurityPolicyListener) {
-        debugLog("Enabling Content-Security-Policy listener");
-        contentSecurityPolicyListener = (details) => {
-            debugLog("Intercepted headers (CSP):", details.responseHeaders);
-            const headers = details.responseHeaders.filter(
-                (header) => header.name.toLowerCase() !== "content-security-policy"
+        if (settings.ignoreContentSecurityPolicy && !contentSecurityPolicyListener) {
+            debugLog("Enabling Content-Security-Policy listener");
+            contentSecurityPolicyListener = (details) => {
+                debugLog("Intercepted headers (CSP):", details.responseHeaders);
+                const headers = details.responseHeaders.filter(
+                    (header) => header.name.toLowerCase() !== "content-security-policy"
+                );
+                debugLog("Modified headers (CSP):", headers);
+                return { responseHeaders: headers };
+            };
+            browser.webRequest.onHeadersReceived.addListener(
+                contentSecurityPolicyListener,
+                { urls: ["<all_urls>"] },
+                ["blocking", "responseHeaders"]
             );
-            debugLog("Modified headers (CSP):", headers);
-            return { responseHeaders: headers };
-        };
-        browser.webRequest.onHeadersReceived.addListener(
-            contentSecurityPolicyListener,
-            { urls: ["<all_urls>"] },
-            ["blocking", "responseHeaders"]
-        );
-    }
+        }
+    });
 }
 
 // リスナーを解除する関数
@@ -68,10 +70,9 @@ function disableListeners() {
 }
 
 // プレビュー機能の状態を監視
-function updateListenersBasedOnPreviewEnabled() {
-    debugLog("updateListenersBasedOnPreviewEnabled is called");
-    browser.storage.local.get("previewEnabled").then((data) => {
-        if (data.previewEnabled) {
+function updateListenersBasedOnSettings() {
+    browser.storage.local.get(["ignoreXFrameOptions", "ignoreContentSecurityPolicy"]).then((settings) => {
+        if (settings.ignoreXFrameOptions || settings.ignoreContentSecurityPolicy) {
             enableListeners();
         } else {
             disableListeners();
@@ -79,13 +80,13 @@ function updateListenersBasedOnPreviewEnabled() {
     });
 }
 
-// 初期化時に状態を確認してリスナーを設定
-updateListenersBasedOnPreviewEnabled();
+// 初期化時にリスナーを設定
+updateListenersBasedOnSettings();
 
 // 設定が変更されたときにリスナーを更新
 browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && changes.previewEnabled) {
-        updateListenersBasedOnPreviewEnabled();
+    if (area === "local" && (changes.ignoreXFrameOptions || changes.ignoreContentSecurityPolicy)) {
+        updateListenersBasedOnSettings();
     }
 });
 
