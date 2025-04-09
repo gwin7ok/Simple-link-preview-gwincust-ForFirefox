@@ -58,6 +58,12 @@ browser.storage.onChanged.addListener((changes, area) => {
     }
 });
 
+browser.storage.local.get({ previewEnabled: true }).then((data) => {
+    if (data.previewEnabled === undefined) {
+        browser.storage.local.set({ previewEnabled: true });
+    }
+});
+
 class Timer {
     constructor(func, timeout) {
         this.func = func;
