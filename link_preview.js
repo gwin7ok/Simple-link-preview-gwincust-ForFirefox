@@ -1,12 +1,12 @@
 ﻿// 初期値を一元管理
 const DEFAULT_SETTINGS = {
-    iconDisplayDelay: 500,
-    iconDisplayTime: 2500,
-    offsetX: -20,
-    offsetY: -10,
-    frameDisplayDelay: 500,
+    iconDisplayDelay: 200,
+    iconDisplayTime: 2000,
+    offsetX: -30,
+    offsetY: -30,
+    frameDisplayDelay: 200,
     frameDisplayTime: 2000,
-    frameUpdateTime: 500
+    frameUpdateTime: 200
 };
 
 // 初期値の直接定義を削除
@@ -91,22 +91,36 @@ class PreviewIcon {
         this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY);
         this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME);
         this.icon = this.build_icon();
+        this.url = null; // 表示するリンクの URL を保持
+        this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
+
+        // マウスの動きを追跡
+        document.addEventListener("mousemove", (e) => {
+            this.mousePosition = { x: e.clientX, y: e.clientY };
+        });
     }
-    show(url, posX, posY) {
-        if (this.icon.style.visibility == 'hidden'){
-            this.url = url
-            this.pos = this._getIconPosition(posX, posY)
-            this.show_timer.stop()
-            this.show_timer.start()
-//            this.hide_timer.stop()
+
+    show(url) {
+        if (this.icon.style.visibility == 'hidden') {
+            this.url = url;
+            this.show_timer.stop();
+            this.show_timer.start();
         }
     }
+
     _show() {
-        this.icon.style.left = this.pos.x + "px";
-        this.icon.style.top  = this.pos.y + "px";
+        // 遅延後に保存された最新のマウスポインタ位置を使用
+        const posX = this.mousePosition.x;
+        const posY = this.mousePosition.y;
+
+        // アイコンを表示する位置を計算
+        const pos = this._getIconPosition(posX, posY);
+        this.icon.style.left = pos.x + "px";
+        this.icon.style.top = pos.y + "px";
         this.icon.style.visibility = 'visible';
-        this.hide_timer.start()
+        this.hide_timer.start();
     }
+
     _hide() {
         this.icon.style.visibility = 'hidden';
     }
@@ -117,22 +131,25 @@ class PreviewIcon {
         icon.setAttribute("id", "link_preview_icon");
         icon.style.visibility = 'hidden';
         document.body.appendChild(icon);
-        icon.addEventListener("mouseover", this._on_mouseover.bind(this))
-        icon.addEventListener("mouseout", this._on_mouseout.bind(this))
-        return icon
+        icon.addEventListener("mouseover", this._on_mouseover.bind(this));
+        icon.addEventListener("mouseout", this._on_mouseout.bind(this));
+        return icon;
     }
+
     _getIconPosition(cursorX, cursorY) {
         const posX = cursorX + OFFSET_X;
         const posY = cursorY + OFFSET_Y;
         return { x: posX, y: posY };
     }
-    _on_mouseover(e){
-        this.hide_timer.stop()
-        preview_frame.show(this.url)
+
+    _on_mouseover(e) {
+        this.hide_timer.stop();
+        preview_frame.show(this.url);
     }
-    _on_mouseout(e){
-        this.hide_timer.start()
-        preview_frame.hide()
+
+    _on_mouseout(e) {
+        this.hide_timer.start();
+        preview_frame.hide();
     }
 }
 
@@ -321,23 +338,16 @@ function on_link_mouseout(e) {
 }
 */
 function on_link_mouseover_doc(e) {
-    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
-
     browser.storage.local.get("previewEnabled").then((data) => {
-        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
         if (!data.previewEnabled) return;
 
         if (e.target.nodeName == 'A') {
-            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
             let url = e.target.href;
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
-                preview_icon.show(url, e.clientX, e.clientY);
+                preview_icon.show(url, e.clientX, e.clientY); // マウスポインタの位置を渡す
             }
-        } else if (e.type == "mouseover") {
-            let parent = { target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY };
-            on_link_mouseover_doc(parent);
         }
     });
 }
@@ -348,24 +358,4 @@ function on_link_mouseout_doc(e) {
             preview_frame.hide()
         }
     }
-}
-
-// link_preview.js
-function on_link_mouseover_doc(e) {
-    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
-
-    browser.storage.local.get("previewEnabled").then((data) => {
-        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
-        if (!data.previewEnabled) return;
-
-        if (e.target.nodeName == 'A') {
-            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
-            let url = e.target.href;
-            if (preview_frame.display) {
-                preview_frame.update(url);
-            } else {
-                preview_icon.show(url, e.clientX, e.clientY);
-            }
-        }
-    });
 }
