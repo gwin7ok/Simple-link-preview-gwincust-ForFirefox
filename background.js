@@ -4,6 +4,13 @@ browser.storage.local.get({ previewEnabled: true }).then((data) => {
     updateIcon(data.previewEnabled); // 初期状態のアイコンを設定
 });
 
+// Firefox 起動時にアイコンを正しい状態に設定
+browser.runtime.onStartup.addListener(() => {
+    browser.storage.local.get("previewEnabled").then((data) => {
+        updateIcon(data.previewEnabled); // 起動時にアイコンを更新
+    });
+});
+
 // アイコンをクリックしたときの処理
 browser.browserAction.onClicked.addListener(() => {
     browser.storage.local.get("previewEnabled").then((data) => {
@@ -23,15 +30,3 @@ function updateIcon(enabled) {
     const iconPath = enabled ? "images/icon-enabled.png" : "images/icon-disabled.png";
     browser.browserAction.setIcon({ path: iconPath });
 }
-// background.js
-browser.browserAction.onClicked.addListener(() => {
-    console.log("アイコンがクリックされました"); // デバッグ用ログ
-
-    browser.storage.local.get("previewEnabled").then((data) => {
-        const newState = !data.previewEnabled;
-        browser.storage.local.set({ previewEnabled: newState });
-        updateIcon(newState);
-
-        console.log(`プレビュー機能の状態を切り替えました: ${newState}`); // デバッグ用ログ
-    });
-});
