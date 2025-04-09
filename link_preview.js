@@ -1,5 +1,4 @@
-﻿// 初期値を一元管理
-const DEFAULT_SETTINGS = {
+﻿const DEFAULT_SETTINGS = {
     iconDisplayDelay: 200,
     iconDisplayTime: 2000,
     offsetX: -30,
