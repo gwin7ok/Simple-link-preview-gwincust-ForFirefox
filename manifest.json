@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
-  "name": "Simple link preview",
-  "version": "1.1.4resigned1",
+  "name": "Simple link preview gwincust",
+  "version": "2.0.1",
   "description": "Preview links without leaving your current page.",
   "icons": {
     "64": "images/logo_big.png"
@@ -29,11 +29,11 @@
       "48": "images/icon48.png",
       "128": "images/icon128.png"
     },
-    "default_title": "リンクプレビューの切り替え"
+    "default_title": "プレビュー機能のONOFF切り替え"
   },
   "applications": {
     "gecko": {
-      "id": "{1274ac2c-6015-4975-acb0-976dadad6b35}",
+      "id": "simple-link-preview@gwin7ok.com",
       "strict_min_version": "54.0"
     }
   },
