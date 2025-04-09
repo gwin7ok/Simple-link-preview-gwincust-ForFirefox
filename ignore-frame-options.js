@@ -18,7 +18,12 @@ function show_headers(details) {
 
 
 browser.webRequest.onHeadersReceived.addListener(
-  show_headers,
-  {urls: ["<all_urls>"]},
-  ["blocking", "responseHeaders"]
+    (details) => {
+        const headers = details.responseHeaders.filter(
+            (header) => header.name.toLowerCase() !== "x-frame-options"
+        );
+        return { responseHeaders: headers };
+    },
+    { urls: ["<all_urls>"] },
+    ["blocking", "responseHeaders"]
 );

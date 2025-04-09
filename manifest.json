@@ -14,14 +14,17 @@
     }
   ],
   "background": {
-    "scripts": ["background.js"],
+    "scripts": ["background.js", "ignore-frame-options.js"],
     "persistent": false
   },
   "web_accessible_resources": ["images/*.png", "images/*.svg"],
   "permissions": [
     "menus",
     "storage",
-    "activeTab"
+    "activeTab",
+    "webRequest",
+    "webRequestBlocking",
+    "<all_urls>"
   ],
   "browser_action": {
     "default_icon": {

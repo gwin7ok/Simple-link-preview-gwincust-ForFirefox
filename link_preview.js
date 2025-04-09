@@ -340,8 +340,10 @@ function on_link_mouseover_doc(e) {
     browser.storage.local.get("previewEnabled").then((data) => {
         if (!data.previewEnabled) return;
 
-        if (e.target.nodeName == 'A') {
-            let url = e.target.href;
+        // マウスオーバーした要素の親要素が<a>タグか確認
+        const linkElement = e.target.closest('a');
+        if (linkElement && linkElement.href) {
+            const url = linkElement.href;
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
