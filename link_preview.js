@@ -3,24 +3,58 @@ let ICON_DISPLAY_DELAY = 500;
 let ICON_DISPLAY_TIME = 2500;
 let OFFSET_X = -20;
 let OFFSET_Y = -10;
+let FRAME_DISPLAY_DELAY = 500;
+let FRAME_DISPLAY_TIME = 2000;
+let FRAME_UPDATE_TIME = 500;
 
-// 設定を読み込む
-browser.storage.local.get({
-    iconDisplayDelay: 500,
-    iconDisplayTime: 2500,
-    offsetX: -20,
-    offsetY: -10
-}).then((settings) => {
-    ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
-    ICON_DISPLAY_TIME = settings.iconDisplayTime;
-    OFFSET_X = settings.offsetX;
-    OFFSET_Y = settings.offsetY;
+// 設定を動的に更新する関数
+function updateSettings() {
+    browser.storage.local.get({
+        iconDisplayDelay: 500,
+        iconDisplayTime: 2500,
+        offsetX: -20,
+        offsetY: -10,
+        frameDisplayDelay: 500,
+        frameDisplayTime: 2000,
+        frameUpdateTime: 500
+    }).then((settings) => {
+        ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
+        ICON_DISPLAY_TIME = settings.iconDisplayTime;
+        OFFSET_X = settings.offsetX;
+        OFFSET_Y = settings.offsetY;
+        FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
+        FRAME_DISPLAY_TIME = settings.frameDisplayTime;
+        FRAME_UPDATE_TIME = settings.frameUpdateTime;
+
+        // タイマーのタイムアウト値を更新
+        preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
+        preview_icon.hide_timer.updateTimeout(ICON_DISPLAY_TIME);
+        preview_frame.show_timer.updateTimeout(FRAME_DISPLAY_DELAY);
+        preview_frame.hide_timer.updateTimeout(FRAME_DISPLAY_TIME);
+        preview_frame.update_timer.updateTimeout(FRAME_UPDATE_TIME);
+
+        // デバッグ用ログ
+        console.log("設定が更新されました:", {
+            ICON_DISPLAY_DELAY,
+            ICON_DISPLAY_TIME,
+            OFFSET_X,
+            OFFSET_Y,
+            FRAME_DISPLAY_DELAY,
+            FRAME_DISPLAY_TIME,
+            FRAME_UPDATE_TIME
+        });
+    });
+}
+
+// 初期設定を読み込む
+updateSettings();
+
+// 設定が変更されたときに再読み込み
+browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local") {
+        updateSettings();
+    }
 });
-
-FRAME_DISPLAY_DELAY = 500
-FRAME_DISPLAY_TIME = 2000
-FRAME_UPDATE_TIME = 500
-
 
 class Timer {
     constructor(func, timeout) {
@@ -31,26 +65,29 @@ class Timer {
     start() {
         if (!this.running) {
             this.timer = setTimeout(this._exec.bind(this), this.timeout);
-            this.running = true
+            this.running = true;
         }
     }
     _exec() {
-        this.func()
-        this.running = false
+        this.func();
+        this.running = false;
     }
     stop() {
         if (this.running) {
-            clearTimeout(this.timer)
-            this.running = false
+            clearTimeout(this.timer);
+            this.running = false;
         }
+    }
+    updateTimeout(newTimeout) {
+        this.timeout = newTimeout; // タイムアウト値を更新
     }
 }
 
 class PreviewIcon {
     constructor() {
-        this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY)
-        this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME)
-        this.icon = this.build_icon()
+        this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY);
+        this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME);
+        this.icon = this.build_icon();
     }
     show(url, posX, posY) {
         if (this.icon.style.visibility == 'hidden'){
@@ -99,12 +136,12 @@ class PreviewIcon {
 class PreviewFrame {
     constructor() {
         this._display = false;
-        this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY)
-        this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME)
-        this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME)
-        this.locked = false
-        this.frame = this.build_frame()
-        this.iframe = this.frame.querySelector('#lprv_content')
+        this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
+        this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
+        this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME);
+        this.locked = false;
+        this.frame = this.build_frame();
+        this.iframe = this.frame.querySelector('#lprv_content');
     }
     get display() {
         return this._display
