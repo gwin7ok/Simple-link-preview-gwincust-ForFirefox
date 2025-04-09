@@ -17,6 +17,16 @@ let FRAME_DISPLAY_DELAY;
 let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
 
+function debugLog(message, data = null) {
+    browser.storage.local.get("debugMode").then((settings) => {
+        if (settings.debugMode) {
+            console.log(message, data);
+        }
+    });
+}
+
+debugLog("link_preview.js is loaded");
+
 // 設定を動的に更新する関数
 function updateSettings() {
     browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
@@ -36,7 +46,7 @@ function updateSettings() {
         preview_frame.update_timer.updateTimeout(FRAME_UPDATE_TIME);
 
         // デバッグ用ログ
-        console.log("設定が更新されました:", {
+        debugLog("設定が更新されました:", {
             ICON_DISPLAY_DELAY,
             ICON_DISPLAY_TIME,
             OFFSET_X,
@@ -182,19 +192,20 @@ class PreviewFrame {
     }
     _show() {
         this._display = true;
-//console.log(this.url)
-        this.iframe.src = this.url
+        debugLog("プレビューを表示します:", this.url);
+        this.iframe.src = this.url;
         this.frame.style.visibility = 'visible';
     }
     hide() {
         if (!this.locked) {
-            this.hide_timer.start()
+            this.hide_timer.start();
         }
-        this.show_timer.stop()
-        this.update_timer.stop()
+        this.show_timer.stop();
+        this.update_timer.stop();
     }
     _hide() {
         this._display = false;
+        debugLog("プレビューを非表示にします");
         this.iframe.src = "about:blank";
         this.frame.style.visibility = 'hidden';
 
@@ -202,16 +213,16 @@ class PreviewFrame {
         document.body.style.marginRight = '0';
     }
     update(url) {
-        this.url = url
-        this.hide_timer.stop()
-        this.update_timer.start()
+        this.url = url;
+        this.hide_timer.stop();
+        this.update_timer.start();
     }
     _update() {
-        if (this.iframe.src != this.url){
-//console.log(this.url)
-            this.iframe.src = this.url
+        if (this.iframe.src != this.url) {
+            debugLog("プレビューを更新します:", this.url);
+            this.iframe.src = this.url;
         }
-        this.hide_timer.stop()
+        this.hide_timer.stop();
     }
     build_frame() {
         let frame = document.createElement("div");
@@ -234,114 +245,97 @@ class PreviewFrame {
           </div>
           <div id="lprv_vresize"></div>
           <iframe id="lprv_content"></iframe>
-        `
+                             `
 //          <iframe id="lprv_content" style="background-color: white;"></iframe>
         browser.storage.local.get("width_percentage").then((settings) => {
             if (settings.width_percentage) {
-                frame.style.width = settings.width_percentage + "%"
+                frame.style.width = settings.width_percentage + "%";
             }
-        }) 
+        });
 
-        frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this))
-        frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this))
-        frame.querySelector('#open_tab').addEventListener("click", this._on_open_tab_click.bind(this))
-        frame.querySelector('#push-pin').addEventListener("click", this._on_push_pin_click.bind(this))
-        frame.querySelector('#hide').addEventListener("click", this._on_hide_click.bind(this))
+        frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
+        frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
+        frame.querySelector('#open_tab').addEventListener("click", this._on_open_tab_click.bind(this));
+        frame.querySelector('#push-pin').addEventListener("click", this._on_push_pin_click.bind(this));
+        frame.querySelector('#hide').addEventListener("click", this._on_hide_click.bind(this));
 
-        frame.querySelector('#lprv_vresize').addEventListener("mousedown", this._on_vresizer_mousedown.bind(this))
+        frame.querySelector('#lprv_vresize').addEventListener("mousedown", this._on_vresizer_mousedown.bind(this));
 
         document.body.appendChild(frame);
-        frame.addEventListener("mouseenter", this._on_mouseover.bind(this))
-        frame.addEventListener("mouseleave", this._on_mouseout.bind(this))
-        return frame
+        frame.addEventListener("mouseenter", this._on_mouseover.bind(this));
+        frame.addEventListener("mouseleave", this._on_mouseout.bind(this));
+        return frame;
     }
 
     _on_nav_back_click(e) {
+        debugLog("戻るボタンがクリックされました");
         window.history.back();
     }
     _on_nav_forward_click() {
+        debugLog("進むボタンがクリックされました");
         window.history.forward();
     }
     _on_open_tab_click() {
-        const url = this.iframe.contentWindow.location.href 
+        const url = this.iframe.contentWindow.location.href;
+        debugLog("新しいタブで開きます:", url);
         let win = window.open(url, '_blank');
         win.focus();
     }
     _on_push_pin_click(e) {
-        let btn = e.target
-        this.locked = !this.locked
-        this.locked ? btn.setAttribute('locked', 'yes') : btn.removeAttribute('locked')
+        let btn = e.target;
+        this.locked = !this.locked;
+        debugLog("プレビューの固定状態を切り替えました:", this.locked);
+        this.locked ? btn.setAttribute('locked', 'yes') : btn.removeAttribute('locked');
     }
     _on_hide_click(e) {
-        this._hide()
+        debugLog("非表示ボタンがクリックされました");
+        this._hide();
     }
-    _on_mouseover(e){
-        this.hide_timer.stop()
+    _on_mouseover(e) {
+        this.hide_timer.stop();
     }
-    _on_mouseout(e){
+    _on_mouseout(e) {
         if (!this.locked) {
-            this.hide_timer.start()
+            this.hide_timer.start();
         }
     }
 
     _on_vresizer_mousedown(e) {
-        const document_width = document.body.clientWidth
+        const document_width = document.body.clientWidth;
 
-        let frame = this.frame // чтобы не биндить document.onmouse...
-        let resizer = frame.querySelector('#lprv_vresize')
-        resizer.style.width = '100%' // иначе не отслеживает mousemove над iframe
+        let frame = this.frame;
+        let resizer = frame.querySelector('#lprv_vresize');
+        resizer.style.width = '100%';
 
-        const old_document_onmousedown = document.onmousedown
-        document.onmousedown = () => {return false} // блокирует выделение текста в основном окне
+        const old_document_onmousedown = document.onmousedown;
+        document.onmousedown = () => { return false; };
 
-        document.onmousemove = function(e) {
-            const width = document_width - e.clientX
-            frame.style.width = width + 'px'
-        }
+        document.onmousemove = function (e) {
+            const width = document_width - e.clientX;
+            frame.style.width = width + 'px';
+        };
 
-        document.onmouseup = function() {
-            resizer.style.width = null // возврат к прописанным в css значениям
-            const width_percentage = Math.floor(100 * frame.clientWidth/document_width) // пересчитать пиксели в проценты
-            frame.style.width = width_percentage + "%"
+        document.onmouseup = function () {
+            resizer.style.width = null;
+            const width_percentage = Math.floor(100 * frame.clientWidth / document_width);
+            frame.style.width = width_percentage + "%";
             browser.storage.local.set({
                 width_percentage: width_percentage
             });
             document.onmousemove = null;
             document.onmouseup = null;
-            document.onmousedown = old_document_onmousedown
-        }
-    }
-
-}
-
-let preview_icon = new PreviewIcon()
-let preview_frame = new PreviewFrame()
-
-let links = document.querySelectorAll('a')
-//Array.prototype.forEach.call(links, (e) => e.addEventListener('mouseenter', on_link_mouseover))
-//Array.prototype.forEach.call(links, (e) => e.addEventListener('mouseleave', on_link_mouseout))
-
-document.addEventListener('mouseover', on_link_mouseover_doc)
-document.addEventListener('mouseout', on_link_mouseout_doc)
-
-/*
-function on_link_mouseover(e) {
-    let url = e.target.href
-//console.log(url)
-// TODO: возможно надо поудалять javascript, mailto, ftp, #
-    if (preview_frame.display) {
-        preview_frame.update(url)
-    } else {
-        preview_icon.show(url, e.clientX, e.clientY)
+            document.onmousedown = old_document_onmousedown;
+        };
     }
 }
 
-function on_link_mouseout(e) {
-    if (preview_frame.display) {
-        preview_frame.hide()
-    }
-}
-*/
+let preview_icon = new PreviewIcon();
+let preview_frame = new PreviewFrame();
+
+let links = document.querySelectorAll('a');
+document.addEventListener('mouseover', on_link_mouseover_doc);
+document.addEventListener('mouseout', on_link_mouseout_doc);
+
 function on_link_mouseover_doc(e) {
     browser.storage.local.get("previewEnabled").then((data) => {
         if (!data.previewEnabled) return;
@@ -353,16 +347,16 @@ function on_link_mouseover_doc(e) {
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
-                preview_icon.show(url, e.clientX, e.clientY); // マウスポインタの位置を渡す
+                preview_icon.show(url, e.clientX, e.clientY);
             }
         }
     });
 }
 
 function on_link_mouseout_doc(e) {
-    if (e.target.nodeName == 'A'){
+    if (e.target.nodeName == 'A') {
         if (preview_frame.display) {
-            preview_frame.hide()
+            preview_frame.hide();
         }
     }
 }
