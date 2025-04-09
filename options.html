@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アドオン設定</title>
+</head>
+<body>
+    <h1>リンクプレビュー設定</h1>
+    <form id="settings-form">
+        <label>
+            アイコン表示遅延 (ms):
+            <input type="number" id="icon-display-delay" min="0" step="100">
+        </label>
+        <br>
+        <label>
+            アイコン表示時間 (ms):
+            <input type="number" id="icon-display-time" min="0" step="100">
+        </label>
+        <br>
+        <label>
+            マウスポインタからのオフセット (X軸, px):
+            <input type="number" id="offset-x" min="-100" step="1">
+        </label>
+        <br>
+        <label>
+            マウスポインタからのオフセット (Y軸, px):
+            <input type="number" id="offset-y" min="-100" step="1">
+        </label>
+        <br>
+        <button type="button" id="save-settings">保存</button>
+    </form>
+    <p id="status"></p>
+    <script src="options.js"></script>
+</body>
+</html>

@@ -1,8 +1,25 @@
-﻿ICON_DISPLAY_DELAY  = 500
-ICON_DISPLAY_TIME   = 2500
+﻿// 初期値
+let ICON_DISPLAY_DELAY = 500;
+let ICON_DISPLAY_TIME = 2500;
+let OFFSET_X = -20;
+let OFFSET_Y = -10;
+
+// 設定を読み込む
+browser.storage.local.get({
+    iconDisplayDelay: 500,
+    iconDisplayTime: 2500,
+    offsetX: -20,
+    offsetY: -10
+}).then((settings) => {
+    ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
+    ICON_DISPLAY_TIME = settings.iconDisplayTime;
+    OFFSET_X = settings.offsetX;
+    OFFSET_Y = settings.offsetY;
+});
+
 FRAME_DISPLAY_DELAY = 500
-FRAME_DISPLAY_TIME  = 2000
-FRAME_UPDATE_TIME   = 500
+FRAME_DISPLAY_TIME = 2000
+FRAME_UPDATE_TIME = 500
 
 
 class Timer {
@@ -65,20 +82,8 @@ class PreviewIcon {
         return icon
     }
     _getIconPosition(cursorX, cursorY) {
-        const offsetX = -20; // 左方向にオフセット
-        const offsetY = -10; // 上方向にオフセット
-        const pos_trsh = 20;
-
-        let posX = cursorX + offsetX;
-        if (posX - pos_trsh < 0) {
-            posX += Math.abs(offsetX) * 2; // 画面外に出ないよう調整
-        }
-
-        let posY = cursorY + offsetY;
-        if (posY - pos_trsh < 0) {
-            posY += Math.abs(offsetY) * 2; // 画面外に出ないよう調整
-        }
-
+        const posX = cursorX + OFFSET_X;
+        const posY = cursorY + OFFSET_Y;
         return { x: posX, y: posY };
     }
     _on_mouseover(e){
