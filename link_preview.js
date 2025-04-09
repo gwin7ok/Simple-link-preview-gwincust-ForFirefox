@@ -1,9 +1,63 @@
-﻿ICON_DISPLAY_DELAY  = 500
-ICON_DISPLAY_TIME   = 2500
-FRAME_DISPLAY_DELAY = 500
-FRAME_DISPLAY_TIME  = 2000
-FRAME_UPDATE_TIME   = 500
+﻿// 初期値を一元管理
+const DEFAULT_SETTINGS = {
+    iconDisplayDelay: 200,
+    iconDisplayTime: 2000,
+    offsetX: -30,
+    offsetY: -30,
+    frameDisplayDelay: 200,
+    frameDisplayTime: 2000,
+    frameUpdateTime: 200
+};
 
+// 初期値の直接定義を削除
+let ICON_DISPLAY_DELAY;
+let ICON_DISPLAY_TIME;
+let OFFSET_X;
+let OFFSET_Y;
+let FRAME_DISPLAY_DELAY;
+let FRAME_DISPLAY_TIME;
+let FRAME_UPDATE_TIME;
+
+// 設定を動的に更新する関数
+function updateSettings() {
+    browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
+        ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
+        ICON_DISPLAY_TIME = settings.iconDisplayTime;
+        OFFSET_X = settings.offsetX;
+        OFFSET_Y = settings.offsetY;
+        FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
+        FRAME_DISPLAY_TIME = settings.frameDisplayTime;
+        FRAME_UPDATE_TIME = settings.frameUpdateTime;
+
+        // タイマーのタイムアウト値を更新
+        preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
+        preview_icon.hide_timer.updateTimeout(ICON_DISPLAY_TIME);
+        preview_frame.show_timer.updateTimeout(FRAME_DISPLAY_DELAY);
+        preview_frame.hide_timer.updateTimeout(FRAME_DISPLAY_TIME);
+        preview_frame.update_timer.updateTimeout(FRAME_UPDATE_TIME);
+
+        // デバッグ用ログ
+        console.log("設定が更新されました:", {
+            ICON_DISPLAY_DELAY,
+            ICON_DISPLAY_TIME,
+            OFFSET_X,
+            OFFSET_Y,
+            FRAME_DISPLAY_DELAY,
+            FRAME_DISPLAY_TIME,
+            FRAME_UPDATE_TIME
+        });
+    });
+}
+
+// 初期設定を読み込む
+updateSettings();
+
+// 設定が変更されたときに再読み込み
+browser.storage.onChanged.addListener((changes, area) => {
+    if (area === "local") {
+        updateSettings();
+    }
+});
 
 class Timer {
     constructor(func, timeout) {
@@ -14,42 +68,59 @@ class Timer {
     start() {
         if (!this.running) {
             this.timer = setTimeout(this._exec.bind(this), this.timeout);
-            this.running = true
+            this.running = true;
         }
     }
     _exec() {
-        this.func()
-        this.running = false
+        this.func();
+        this.running = false;
     }
     stop() {
         if (this.running) {
-            clearTimeout(this.timer)
-            this.running = false
+            clearTimeout(this.timer);
+            this.running = false;
         }
+    }
+    updateTimeout(newTimeout) {
+        this.timeout = newTimeout; // タイムアウト値を更新
     }
 }
 
 class PreviewIcon {
     constructor() {
-        this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY)
-        this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME)
-        this.icon = this.build_icon()
+        this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY);
+        this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME);
+        this.icon = this.build_icon();
+        this.url = null; // 表示するリンクの URL を保持
+        this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
+
+        // マウスの動きを追跡
+        document.addEventListener("mousemove", (e) => {
+            this.mousePosition = { x: e.clientX, y: e.clientY };
+        });
     }
-    show(url, posX, posY) {
-        if (this.icon.style.visibility == 'hidden'){
-            this.url = url
-            this.pos = this._getIconPosition(posX, posY)
-            this.show_timer.stop()
-            this.show_timer.start()
-//            this.hide_timer.stop()
+
+    show(url) {
+        if (this.icon.style.visibility == 'hidden') {
+            this.url = url;
+            this.show_timer.stop();
+            this.show_timer.start();
         }
     }
+
     _show() {
-        this.icon.style.left = this.pos.x + "px";
-        this.icon.style.top  = this.pos.y + "px";
+        // 遅延後に保存された最新のマウスポインタ位置を使用
+        const posX = this.mousePosition.x;
+        const posY = this.mousePosition.y;
+
+        // アイコンを表示する位置を計算
+        const pos = this._getIconPosition(posX, posY);
+        this.icon.style.left = pos.x + "px";
+        this.icon.style.top = pos.y + "px";
         this.icon.style.visibility = 'visible';
-        this.hide_timer.start()
+        this.hide_timer.start();
     }
+
     _hide() {
         this.icon.style.visibility = 'hidden';
     }
@@ -60,46 +131,37 @@ class PreviewIcon {
         icon.setAttribute("id", "link_preview_icon");
         icon.style.visibility = 'hidden';
         document.body.appendChild(icon);
-        icon.addEventListener("mouseover", this._on_mouseover.bind(this))
-        icon.addEventListener("mouseout", this._on_mouseout.bind(this))
-        return icon
+        icon.addEventListener("mouseover", this._on_mouseover.bind(this));
+        icon.addEventListener("mouseout", this._on_mouseout.bind(this));
+        return icon;
     }
+
     _getIconPosition(cursorX, cursorY) {
-        const offsetX = -20; // 左方向にオフセット
-        const offsetY = -10; // 上方向にオフセット
-        const pos_trsh = 20;
-
-        let posX = cursorX + offsetX;
-        if (posX - pos_trsh < 0) {
-            posX += Math.abs(offsetX) * 2; // 画面外に出ないよう調整
-        }
-
-        let posY = cursorY + offsetY;
-        if (posY - pos_trsh < 0) {
-            posY += Math.abs(offsetY) * 2; // 画面外に出ないよう調整
-        }
-
+        const posX = cursorX + OFFSET_X;
+        const posY = cursorY + OFFSET_Y;
         return { x: posX, y: posY };
     }
-    _on_mouseover(e){
-        this.hide_timer.stop()
-        preview_frame.show(this.url)
+
+    _on_mouseover(e) {
+        this.hide_timer.stop();
+        preview_frame.show(this.url);
     }
-    _on_mouseout(e){
-        this.hide_timer.start()
-        preview_frame.hide()
+
+    _on_mouseout(e) {
+        this.hide_timer.start();
+        preview_frame.hide();
     }
 }
 
 class PreviewFrame {
     constructor() {
         this._display = false;
-        this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY)
-        this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME)
-        this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME)
-        this.locked = false
-        this.frame = this.build_frame()
-        this.iframe = this.frame.querySelector('#lprv_content')
+        this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
+        this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
+        this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME);
+        this.locked = false;
+        this.frame = this.build_frame();
+        this.iframe = this.frame.querySelector('#lprv_content');
     }
     get display() {
         return this._display
@@ -276,23 +338,16 @@ function on_link_mouseout(e) {
 }
 */
 function on_link_mouseover_doc(e) {
-    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
-
     browser.storage.local.get("previewEnabled").then((data) => {
-        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
         if (!data.previewEnabled) return;
 
         if (e.target.nodeName == 'A') {
-            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
             let url = e.target.href;
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
-                preview_icon.show(url, e.clientX, e.clientY);
+                preview_icon.show(url, e.clientX, e.clientY); // マウスポインタの位置を渡す
             }
-        } else if (e.type == "mouseover") {
-            let parent = { target: e.target.parentNode, clientX: e.clientX, clientY: e.clientY };
-            on_link_mouseover_doc(parent);
         }
     });
 }
@@ -303,24 +358,4 @@ function on_link_mouseout_doc(e) {
             preview_frame.hide()
         }
     }
-}
-
-// link_preview.js
-function on_link_mouseover_doc(e) {
-    console.log("マウスオーバーイベントが発生しました"); // デバッグ用ログ
-
-    browser.storage.local.get("previewEnabled").then((data) => {
-        console.log(`プレビュー機能の状態: ${data.previewEnabled}`); // デバッグ用ログ
-        if (!data.previewEnabled) return;
-
-        if (e.target.nodeName == 'A') {
-            console.log(`リンク先の URL: ${e.target.href}`); // デバッグ用ログ
-            let url = e.target.href;
-            if (preview_frame.display) {
-                preview_frame.update(url);
-            } else {
-                preview_icon.show(url, e.clientX, e.clientY);
-            }
-        }
-    });
 }

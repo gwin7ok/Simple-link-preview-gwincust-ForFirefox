@@ -30,3 +30,17 @@ function updateIcon(enabled) {
     const iconPath = enabled ? "images/icon-enabled.png" : "images/icon-disabled.png";
     browser.browserAction.setIcon({ path: iconPath });
 }
+
+// コンテキストメニューを作成
+browser.menus.create({
+    id: "open-options",
+    title: "オプション",
+    contexts: ["browser_action"] // ツールバーアイコンの右クリックメニューに表示
+});
+
+// メニュークリック時の処理
+browser.menus.onClicked.addListener((info) => {
+    if (info.menuItemId === "open-options") {
+        browser.runtime.openOptionsPage(); // オプションページを開く
+    }
+});

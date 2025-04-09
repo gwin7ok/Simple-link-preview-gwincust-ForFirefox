@@ -19,9 +19,7 @@
   },
   "web_accessible_resources": ["images/*.png", "images/*.svg"],
   "permissions": [
-    "webRequest",
-    "webRequestBlocking",
-    "<all_urls>",
+    "menus",
     "storage",
     "activeTab"
   ],
@@ -38,5 +36,9 @@
       "id": "{1274ac2c-6015-4975-acb0-976dadad6b35}",
       "strict_min_version": "54.0"
     }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
   }
 }
