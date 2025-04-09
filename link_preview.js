@@ -1,23 +1,26 @@
-﻿// 初期値
-let ICON_DISPLAY_DELAY = 500;
-let ICON_DISPLAY_TIME = 2500;
-let OFFSET_X = -20;
-let OFFSET_Y = -10;
-let FRAME_DISPLAY_DELAY = 500;
-let FRAME_DISPLAY_TIME = 2000;
-let FRAME_UPDATE_TIME = 500;
+﻿// 初期値を一元管理
+const DEFAULT_SETTINGS = {
+    iconDisplayDelay: 500,
+    iconDisplayTime: 2500,
+    offsetX: -20,
+    offsetY: -10,
+    frameDisplayDelay: 500,
+    frameDisplayTime: 2000,
+    frameUpdateTime: 500
+};
+
+// 初期値の直接定義を削除
+let ICON_DISPLAY_DELAY;
+let ICON_DISPLAY_TIME;
+let OFFSET_X;
+let OFFSET_Y;
+let FRAME_DISPLAY_DELAY;
+let FRAME_DISPLAY_TIME;
+let FRAME_UPDATE_TIME;
 
 // 設定を動的に更新する関数
 function updateSettings() {
-    browser.storage.local.get({
-        iconDisplayDelay: 500,
-        iconDisplayTime: 2500,
-        offsetX: -20,
-        offsetY: -10,
-        frameDisplayDelay: 500,
-        frameDisplayTime: 2000,
-        frameUpdateTime: 500
-    }).then((settings) => {
+    browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
         ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
         ICON_DISPLAY_TIME = settings.iconDisplayTime;
         OFFSET_X = settings.offsetX;
