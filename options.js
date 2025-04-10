@@ -63,6 +63,34 @@ document.addEventListener('DOMContentLoaded', () => {
             )
         ).then(() => {
             debugLog("設定を保存しました:", settings);
+
+            // ステータス表示
+            const status = document.getElementById('status');
+            status.textContent = '設定を保存しました！';
+            setTimeout(() => (status.textContent = ''), 2000);
         });
+    });
+
+    document.getElementById('reset-settings').addEventListener('click', () => {
+        // フォームに初期値を反映（ローカルストレージには保存しない）
+        document.getElementById('icon-display-delay').value = DEFAULT_SETTINGS.iconDisplayDelay;
+        document.getElementById('icon-display-time').value = DEFAULT_SETTINGS.iconDisplayTime;
+        document.getElementById('icon-display-offset-x').value = DEFAULT_SETTINGS.iconDisplayOffsetX;
+        document.getElementById('icon-display-offset-y').value = DEFAULT_SETTINGS.iconDisplayOffsetY;
+        document.getElementById('frame-display-delay').value = DEFAULT_SETTINGS.frameDisplayDelay;
+        document.getElementById('frame-display-time').value = DEFAULT_SETTINGS.frameDisplayTime;
+        document.getElementById('frame-update-time').value = DEFAULT_SETTINGS.frameUpdateTime;
+        document.getElementById('body-right-margin-width-px').value = DEFAULT_SETTINGS.bodyRightMarginWidthPx;
+        document.getElementById('preview-width-px').value = DEFAULT_SETTINGS.previewWidthPx;
+        document.getElementById('ignore-x-frame-options').checked = DEFAULT_SETTINGS.ignoreXFrameOptions;
+        document.getElementById('ignore-content-security-policy').checked = DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
+        document.getElementById('debug-mode').checked = DEFAULT_SETTINGS.debugMode;
+
+        // ステータス表示
+        const status = document.getElementById('status');
+        status.textContent = '設定を初期値に戻しました！（保存されていません）';
+        setTimeout(() => (status.textContent = ''), 2000);
+
+        debugLog("フォームの値を初期値に戻しました（保存されていません）:", DEFAULT_SETTINGS);
     });
 });
