@@ -3,8 +3,8 @@
 // https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/webRequest/onHeadersReceived
 
 function debugLog(message, data = null) {
-    browser.storage.local.get("debugMode").then((settings) => {
-        if (settings.debugMode) {
+    browser.storage.local.get("SLPGC_debugMode").then((settings) => {
+        if (settings.SLPGC_debugMode) {
             console.log(message, data);
         }
     });
@@ -17,8 +17,8 @@ let contentSecurityPolicyListener = null;
 
 // リスナーを登録する関数
 function enableListeners() {
-    browser.storage.local.get(["ignoreXFrameOptions", "ignoreContentSecurityPolicy"]).then((settings) => {
-        if (settings.ignoreXFrameOptions && !xFrameOptionsListener) {
+    browser.storage.local.get(["SLPGC_ignoreXFrameOptions", "SLPGC_ignoreContentSecurityPolicy"]).then((settings) => {
+        if (settings.SLPGC_ignoreXFrameOptions && !xFrameOptionsListener) {
             debugLog("Enabling X-Frame-Options listener");
             xFrameOptionsListener = (details) => {
                 debugLog("Intercepted headers (X-Frame-Options):", details.responseHeaders);
@@ -35,7 +35,7 @@ function enableListeners() {
             );
         }
 
-        if (settings.ignoreContentSecurityPolicy && !contentSecurityPolicyListener) {
+        if (settings.SLPGC_ignoreContentSecurityPolicy && !contentSecurityPolicyListener) {
             debugLog("Enabling Content-Security-Policy listener");
             contentSecurityPolicyListener = (details) => {
                 debugLog("Intercepted headers (CSP):", details.responseHeaders);
@@ -71,8 +71,8 @@ function disableListeners() {
 
 // プレビュー機能の状態を監視
 function updateListenersBasedOnSettings() {
-    browser.storage.local.get(["ignoreXFrameOptions", "ignoreContentSecurityPolicy"]).then((settings) => {
-        if (settings.ignoreXFrameOptions || settings.ignoreContentSecurityPolicy) {
+    browser.storage.local.get(["SLPGC_ignoreXFrameOptions", "SLPGC_ignoreContentSecurityPolicy"]).then((settings) => {
+        if (settings.SLPGC_ignoreXFrameOptions || settings.SLPGC_ignoreContentSecurityPolicy) {
             enableListeners();
         } else {
             disableListeners();
@@ -85,7 +85,7 @@ updateListenersBasedOnSettings();
 
 // 設定が変更されたときにリスナーを更新
 browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && (changes.ignoreXFrameOptions || changes.ignoreContentSecurityPolicy)) {
+    if (area === "local" && (changes.SLPGC_ignoreXFrameOptions || changes.SLPGC_ignoreContentSecurityPolicy)) {
         updateListenersBasedOnSettings();
     }
 });

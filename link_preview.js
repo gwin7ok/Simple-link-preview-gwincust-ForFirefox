@@ -1,13 +1,16 @@
 ﻿const DEFAULT_SETTINGS = {
     iconDisplayDelay: 200,
     iconDisplayTime: 2000,
-    iconDisplayOffsetX: -30, // 変更: offsetX -> iconDisplayOffsetX
-    iconDisplayOffsetY: -30, // 変更: offsetY -> iconDisplayOffsetY
+    iconDisplayOffsetX: -30,
+    iconDisplayOffsetY: -30,
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
-    bodyRightMarginWidthPx: 800, // 変更: rightMarginWidth -> bodyRightMarginWidthPx
-    previewWidthPx: 800 // 変更: widthPx -> previewWidthPx
+    bodyRightMarginWidthPx: 800,
+    previewWidthPx: 800,
+    ignoreXFrameOptions: false, // 他の設定値と同様に扱う
+    ignoreContentSecurityPolicy: false, // 他の設定値と同様に扱う
+    debugMode: false // 他の設定値と同様に扱う
 };
 
 // 初期値の直接定義を削除
@@ -20,10 +23,13 @@ let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
 let BODY_RIGHT_MARGIN_WIDTH_PX; // 変更: RIGHT_MARGIN_WIDTH -> BODY_RIGHT_MARGIN_WIDTH_PX
 let PREVIEW_WIDTH_PX; // 変更: WIDTH_PX -> PREVIEW_WIDTH_PX
+let IGNORE_X_FRAME_OPTIONS; // 追加
+let IGNORE_CONTENT_SECURITY_POLICY; // 追加
+let DEBUG_MODE; // 追加
 
 function debugLog(message, data = null) {
-    browser.storage.local.get("debugMode").then((settings) => {
-        if (settings.debugMode) {
+    browser.storage.local.get("SLPGC_debugMode").then((settings) => { // 修正: debugMode -> SLPGC_debugMode
+        if (settings.SLPGC_debugMode) {
             console.log(message, data);
         }
     });
@@ -33,16 +39,24 @@ debugLog("link_preview.js is loaded");
 
 // 設定を動的に更新する関数
 function updateSettings() {
-    browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
-        ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
-        ICON_DISPLAY_TIME = settings.iconDisplayTime;
-        ICON_DISPLAY_OFFSET_X = settings.iconDisplayOffsetX;
-        ICON_DISPLAY_OFFSET_Y = settings.iconDisplayOffsetY;
-        FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
-        FRAME_DISPLAY_TIME = settings.frameDisplayTime;
-        FRAME_UPDATE_TIME = settings.frameUpdateTime;
-        BODY_RIGHT_MARGIN_WIDTH_PX = settings.bodyRightMarginWidthPx || DEFAULT_SETTINGS.bodyRightMarginWidthPx;
-        PREVIEW_WIDTH_PX = settings.previewWidthPx || DEFAULT_SETTINGS.previewWidthPx;
+    // ストレージから設定を取得
+    browser.storage.local.get(
+        Object.fromEntries(
+            Object.keys(DEFAULT_SETTINGS).map(key => [`SLPGC_${key}`, DEFAULT_SETTINGS[key]])
+        )
+    ).then((settings) => {
+        ICON_DISPLAY_DELAY = settings.SLPGC_iconDisplayDelay || DEFAULT_SETTINGS.iconDisplayDelay;
+        ICON_DISPLAY_TIME = settings.SLPGC_iconDisplayTime || DEFAULT_SETTINGS.iconDisplayTime;
+        ICON_DISPLAY_OFFSET_X = settings.SLPGC_iconDisplayOffsetX || DEFAULT_SETTINGS.iconDisplayOffsetX;
+        ICON_DISPLAY_OFFSET_Y = settings.SLPGC_iconDisplayOffsetY || DEFAULT_SETTINGS.iconDisplayOffsetY;
+        FRAME_DISPLAY_DELAY = settings.SLPGC_frameDisplayDelay || DEFAULT_SETTINGS.frameDisplayDelay;
+        FRAME_DISPLAY_TIME = settings.SLPGC_frameDisplayTime || DEFAULT_SETTINGS.frameDisplayTime;
+        FRAME_UPDATE_TIME = settings.SLPGC_frameUpdateTime || DEFAULT_SETTINGS.frameUpdateTime;
+        BODY_RIGHT_MARGIN_WIDTH_PX = settings.SLPGC_bodyRightMarginWidthPx || DEFAULT_SETTINGS.bodyRightMarginWidthPx;
+        PREVIEW_WIDTH_PX = settings.SLPGC_previewWidthPx || DEFAULT_SETTINGS.previewWidthPx;
+        IGNORE_X_FRAME_OPTIONS = settings.SLPGC_ignoreXFrameOptions || DEFAULT_SETTINGS.ignoreXFrameOptions; // 追加
+        IGNORE_CONTENT_SECURITY_POLICY = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy; // 追加
+        DEBUG_MODE = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode; // 追加
 
         // タイマーのタイムアウト値を更新
         preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
@@ -71,7 +85,10 @@ function updateSettings() {
             FRAME_DISPLAY_TIME,
             FRAME_UPDATE_TIME,
             BODY_RIGHT_MARGIN_WIDTH_PX,
-            PREVIEW_WIDTH_PX
+            PREVIEW_WIDTH_PX,
+            IGNORE_X_FRAME_OPTIONS,
+            IGNORE_CONTENT_SECURITY_POLICY,
+            DEBUG_MODE
         });
     });
 }
@@ -86,9 +103,9 @@ browser.storage.onChanged.addListener((changes, area) => {
     }
 });
 
-browser.storage.local.get({ previewEnabled: true }).then((data) => {
-    if (data.previewEnabled === undefined) {
-        browser.storage.local.set({ previewEnabled: true });
+browser.storage.local.get({ SLPGC_previewEnabled: true }).then((data) => { // 修正: previewEnabled -> SLPGC_previewEnabled
+    if (data.SLPGC_previewEnabled === undefined) {
+        browser.storage.local.set({ SLPGC_previewEnabled: true }); // 修正: previewEnabled -> SLPGC_previewEnabled
     }
 });
 
@@ -205,13 +222,14 @@ class PreviewFrame {
         this.url = url;
         this.show_timer.start();
         this.hide_timer.stop();
-
-        // body要素の右マージンを設定
-        document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
     }
 
     _show() {
         this._display = true;
+
+        // プレビューを表示する直前にBodyの右マージン幅を設定
+        document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
+
         debugLog("プレビューを表示します:", this.url);
         this.iframe.src = this.url;
         this.frame.style.visibility = 'visible';
@@ -231,7 +249,7 @@ class PreviewFrame {
         this.iframe.src = "about:blank";
         this.frame.style.visibility = 'hidden';
 
-        // body要素の右マージンをリセット
+        // プレビューを非表示にした際にBodyの右マージン幅をリセット
         document.body.style.marginRight = '0';
     }
 
@@ -328,8 +346,8 @@ document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);
 
 function on_link_mouseover_doc(e) {
-    browser.storage.local.get("previewEnabled").then((data) => {
-        if (!data.previewEnabled) return;
+    browser.storage.local.get("SLPGC_previewEnabled").then((data) => { // 修正: previewEnabled -> SLPGC_previewEnabled
+        if (!data.SLPGC_previewEnabled) return; // 修正: previewEnabled -> SLPGC_previewEnabled
 
         // マウスオーバーした要素の親要素が<a>タグか確認
         const linkElement = e.target.closest('a');

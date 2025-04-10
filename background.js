@@ -1,21 +1,21 @@
 // プレビュー機能の状態を初期化
-browser.storage.local.get({ previewEnabled: true }).then((data) => {
-    browser.storage.local.set({ previewEnabled: data.previewEnabled });
-    updateIcon(data.previewEnabled); // 初期状態のアイコンを設定
+browser.storage.local.get({ SLPGC_previewEnabled: true }).then((data) => {
+    browser.storage.local.set({ SLPGC_previewEnabled: data.SLPGC_previewEnabled });
+    updateIcon(data.SLPGC_previewEnabled); // 初期状態のアイコンを設定
 });
 
 // Firefox 起動時にアイコンを正しい状態に設定
 browser.runtime.onStartup.addListener(() => {
-    browser.storage.local.get("previewEnabled").then((data) => {
-        updateIcon(data.previewEnabled); // 起動時にアイコンを更新
+    browser.storage.local.get("SLPGC_previewEnabled").then((data) => {
+        updateIcon(data.SLPGC_previewEnabled); // 起動時にアイコンを更新
     });
 });
 
 // アイコンをクリックしたときの処理
 browser.browserAction.onClicked.addListener(() => {
-    browser.storage.local.get("previewEnabled").then((data) => {
-        const newState = !data.previewEnabled; // 状態を切り替え
-        browser.storage.local.set({ previewEnabled: newState });
+    browser.storage.local.get("SLPGC_previewEnabled").then((data) => {
+        const newState = !data.SLPGC_previewEnabled; // 状態を切り替え
+        browser.storage.local.set({ SLPGC_previewEnabled: newState });
 
         // アイコンの状態を更新
         updateIcon(newState);
