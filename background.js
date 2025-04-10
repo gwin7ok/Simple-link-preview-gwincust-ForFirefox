@@ -56,12 +56,9 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
                 // 特殊なタブを除外
                 if (tab.url && !tab.url.startsWith("about:") && !tab.url.startsWith("chrome://") && !tab.url.startsWith("moz-extension://")) {
                     browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" }).catch((error) => {
-                        // `content_scripts`がロードされていない場合にスクリプトを挿入
+                        // `content_scripts` がロードされていない場合にスクリプトを挿入
                         if (error.message.includes("Could not establish connection")) {
-                            browser.scripting.executeScript({
-                                target: { tabId: tab.id },
-                                files: ["link_preview.js"]
-                            }).then(() => {
+                            browser.tabs.executeScript(tab.id, { file: "link_preview.js" }).then(() => {
                                 // スクリプト挿入後に再送信
                                 browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" }).catch((error) => {
                                     console.warn(`Failed to send message to tab ${tab.id} after injecting script:`, error.message);
