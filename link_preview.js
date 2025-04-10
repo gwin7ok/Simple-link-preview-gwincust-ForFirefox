@@ -56,6 +56,11 @@ function updateSettings() {
             preview_frame.frame.style.width = `${WIDTH_PX}px`;
         }
 
+        // プレビューウィンドウが表示されている場合、右マージン幅を更新
+        if (preview_frame.display) {
+            document.body.style.marginRight = `${RIGHT_MARGIN_WIDTH}px`;
+        }
+
         // デバッグ用ログ
         debugLog("設定が更新されました:", {
             ICON_DISPLAY_DELAY,
