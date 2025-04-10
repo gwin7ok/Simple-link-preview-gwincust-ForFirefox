@@ -3,7 +3,7 @@
     iconDisplayTime: 2000,
     iconDisplayOffsetX: -30,
     iconDisplayOffsetY: -30,
-    frameDisplayDelay: 200,
+    frameDisplayDelay: 500,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
     bodyRightMarginWidthPx: 800,
