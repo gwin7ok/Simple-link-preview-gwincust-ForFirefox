@@ -10,7 +10,8 @@ const DEFAULT_SETTINGS = {
     ignoreContentSecurityPolicy: false,
     debugMode: false, // デバッグモードのデフォルト値
     rightMarginWidth: 800, // コンテンツの右マージン幅の初期値
-    widthPercentage: 50 // プレビューウィンドウの幅の初期値（%）
+    widthPercentage: 50, // プレビューウィンドウの幅の初期値（%）
+    widthPx: 800 // プレビューウィンドウの幅の初期値（px）
 };
 
 function debugLog(message, data = null) {
@@ -45,7 +46,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-x-frame-options').checked = settings.ignoreXFrameOptions;
         document.getElementById('ignore-content-security-policy').checked = settings.ignoreContentSecurityPolicy;
         document.getElementById('right-margin-width').value = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
-        document.getElementById('width-percentage').value = settings.widthPercentage || DEFAULT_SETTINGS.widthPercentage;
+        
+        document.getElementById('width-px').value = settings.widthPx || DEFAULT_SETTINGS.widthPx;
     });
 
     // 設定を保存する
@@ -61,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const ignoreXFrameOptions = document.getElementById('ignore-x-frame-options').checked;
         const ignoreContentSecurityPolicy = document.getElementById('ignore-content-security-policy').checked;
         const rightMarginWidth = parseInt(document.getElementById('right-margin-width').value, 10);
-        const widthPercentage = parseInt(document.getElementById('width-percentage').value, 10);
+        
+        const widthPx = parseInt(document.getElementById('width-px').value, 10);
 
         browser.storage.local.set({
             iconDisplayDelay,
@@ -75,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ignoreXFrameOptions,
             ignoreContentSecurityPolicy,
             rightMarginWidth,
-            widthPercentage
+            widthPx
         }).then(() => {
             const status = document.getElementById('status');
             status.textContent = '設定を保存しました！';
@@ -92,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ignoreXFrameOptions,
                 ignoreContentSecurityPolicy,
                 rightMarginWidth,
-                widthPercentage
+                widthPx
             });
         });
     });

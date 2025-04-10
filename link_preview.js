@@ -7,7 +7,7 @@
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
     rightMarginWidth: 800,
-    widthPercentage: 50
+    widthPx: 800 // プレビューウィンドウの幅の初期値（px）
 };
 
 // 初期値の直接定義を削除
@@ -19,7 +19,7 @@ let FRAME_DISPLAY_DELAY;
 let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
 let RIGHT_MARGIN_WIDTH;
-let WIDTH_PERCENTAGE;
+let WIDTH_PX;
 
 function debugLog(message, data = null) {
     browser.storage.local.get("debugMode").then((settings) => {
@@ -42,7 +42,7 @@ function updateSettings() {
         FRAME_DISPLAY_TIME = settings.frameDisplayTime;
         FRAME_UPDATE_TIME = settings.frameUpdateTime;
         RIGHT_MARGIN_WIDTH = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
-        WIDTH_PERCENTAGE = settings.widthPercentage || DEFAULT_SETTINGS.widthPercentage;
+        WIDTH_PX = settings.widthPx || DEFAULT_SETTINGS.widthPx;
 
         // タイマーのタイムアウト値を更新
         preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
@@ -53,7 +53,7 @@ function updateSettings() {
 
         // プレビューウィンドウの幅を再設定
         if (preview_frame.frame) {
-            preview_frame.frame.style.width = `${WIDTH_PERCENTAGE}%`;
+            preview_frame.frame.style.width = `${WIDTH_PX}px`;
         }
 
         // デバッグ用ログ
@@ -66,7 +66,7 @@ function updateSettings() {
             FRAME_DISPLAY_TIME,
             FRAME_UPDATE_TIME,
             RIGHT_MARGIN_WIDTH,
-            WIDTH_PERCENTAGE
+            WIDTH_PX
         });
     });
 }
@@ -268,7 +268,7 @@ class PreviewFrame {
         `;
 
         // プレビューウィンドウの幅を設定
-        frame.style.width = `${WIDTH_PERCENTAGE}%`;
+        frame.style.width = `${WIDTH_PX}px`;
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
@@ -334,10 +334,10 @@ class PreviewFrame {
 
         document.onmouseup = function () {
             resizer.style.width = null;
-            const width_percentage = Math.floor(100 * frame.clientWidth / document_width);
-            frame.style.width = width_percentage + "%";
+            const width_px = frame.clientWidth;
+            frame.style.width = `${width_px}px`;
             browser.storage.local.set({
-                width_percentage: width_percentage
+                widthPx: width_px
             });
             document.onmousemove = null;
             document.onmouseup = null;
