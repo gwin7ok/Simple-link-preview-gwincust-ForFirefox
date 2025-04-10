@@ -11,6 +11,7 @@ const DEFAULT_SETTINGS = {
     ignoreXFrameOptions: false,
     ignoreContentSecurityPolicy: false,
     debugMode: false,
+    urlFilterList: "", // 改行区切りの文字列リスト
 };
 
 function debugLog(message, data = null) {
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-x-frame-options').checked = settings.SLPGC_ignoreXFrameOptions || DEFAULT_SETTINGS.ignoreXFrameOptions;
         document.getElementById('ignore-content-security-policy').checked = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
         document.getElementById('debug-mode').checked = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode;
+        document.getElementById('url-filter-list').value = settings.SLPGC_urlFilterList || DEFAULT_SETTINGS.urlFilterList;
     });
 
     document.getElementById('save-settings').addEventListener('click', () => {
@@ -54,7 +56,8 @@ document.addEventListener('DOMContentLoaded', () => {
             previewWidthPx: parseInt(document.getElementById('preview-width-px').value, 10),
             ignoreXFrameOptions: document.getElementById('ignore-x-frame-options').checked,
             ignoreContentSecurityPolicy: document.getElementById('ignore-content-security-policy').checked,
-            debugMode: document.getElementById('debug-mode').checked
+            debugMode: document.getElementById('debug-mode').checked,
+            urlFilterList: document.getElementById('url-filter-list').value,
         };
 
         browser.storage.local.set(
@@ -85,6 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-x-frame-options').checked = DEFAULT_SETTINGS.ignoreXFrameOptions;
         document.getElementById('ignore-content-security-policy').checked = DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
         document.getElementById('debug-mode').checked = DEFAULT_SETTINGS.debugMode;
+        document.getElementById('url-filter-list').value = DEFAULT_SETTINGS.urlFilterList;
 
         // ステータス表示
         const status = document.getElementById('status');

@@ -346,13 +346,21 @@ document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);
 
 function on_link_mouseover_doc(e) {
-    browser.storage.local.get("SLPGC_previewEnabled").then((data) => { // 修正: previewEnabled -> SLPGC_previewEnabled
-        if (!data.SLPGC_previewEnabled) return; // 修正: previewEnabled -> SLPGC_previewEnabled
+    browser.storage.local.get(["SLPGC_previewEnabled", "SLPGC_urlFilterList"]).then((data) => {
+        if (!data.SLPGC_previewEnabled) return;
 
         // マウスオーバーした要素の親要素が<a>タグか確認
         const linkElement = e.target.closest('a');
         if (linkElement && linkElement.href) {
             const url = linkElement.href;
+
+            // フィルタリストを確認
+            const filterList = (data.SLPGC_urlFilterList || "").split("\n").map(s => s.trim()).filter(s => s);
+            if (filterList.some(filter => url.includes(filter))) {
+                debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
+                return;
+            }
+
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
