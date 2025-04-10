@@ -34,21 +34,29 @@
   - デフォルト値: `200`
 - **`iconDisplayTime`**: プレビューアイコンの表示時間（ミリ秒）。
   - デフォルト値: `2000`
-- **`offsetX`**: プレビューアイコンの表示位置のX軸オフセット。
+- **`iconDisplayOffsetX`**: プレビューアイコンの表示位置のX軸オフセット。
   - デフォルト値: `-30`
-- **`offsetY`**: プレビューアイコンの表示位置のY軸オフセット。
+- **`iconDisplayOffsetY`**: プレビューアイコンの表示位置のY軸オフセット。
   - デフォルト値: `-30`
 - **`frameDisplayDelay`**: プレビューウィンドウの表示遅延時間（ミリ秒）。
-  - デフォルト値: `200`
+  - デフォルト値: `500`
 - **`frameDisplayTime`**: プレビューウィンドウの表示時間（ミリ秒）。
   - デフォルト値: `2000`
 - **`frameUpdateTime`**: プレビューウィンドウの更新間隔（ミリ秒）。
   - デフォルト値: `200`
+- **`bodyRightMarginWidthPx`**: プレビューウィンドウ表示時の右マージン幅（ピクセル）。
+  - デフォルト値: `800`
+- **`previewWidthPx`**: プレビューウィンドウの幅（ピクセル）。
+  - デフォルト値: `800`
 - **`ignoreXFrameOptions`**: `X-Frame-Options`ヘッダーを無視するかどうか。
   - デフォルト値: `false`
 - **`ignoreContentSecurityPolicy`**: `Content-Security-Policy`ヘッダーを無視するかどうか。
   - デフォルト値: `false`
 - **`debugMode`**: デバッグモードを有効にするかどうか。
+  - デフォルト値: `false`
+- **`urlFilterList`**: プレビューを無視するURL文字列のリスト（改行区切り）。
+  - デフォルト値: 空文字列
+- **`keepPreviewFrameOpen`**: プレビューウィンドウを常に固定するかどうか。
   - デフォルト値: `false`
 
 ---
