@@ -1,19 +1,8 @@
-const DEFAULT_SETTINGS = {
-    iconDisplayDelay: 200,
-    iconDisplayTime: 2000,
-    iconDisplayOffsetX: -30,
-    iconDisplayOffsetY: -30,
-    frameDisplayDelay: 500,
-    frameDisplayTime: 2000,
-    frameUpdateTime: 200,
-    bodyRightMarginWidthPx: 800,
-    previewWidthPx: 800,
-    ignoreXFrameOptions: false,
-    ignoreContentSecurityPolicy: false,
-    debugMode: false,
-    urlFilterList: "", // 改行区切りの文字列リスト
-    keepPreviewFrameOpen: false // プレビューを常に固定する
-};
+if (typeof DEFAULT_SETTINGS === 'undefined') {
+    console.error("DEFAULT_SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+} else {
+    console.log("DEFAULT_SETTINGS が正しく読み込まれました:", DEFAULT_SETTINGS);
+}
 
 function debugLog(message, data = null) {
     browser.storage.local.get("SLPGC_debugMode").then((settings) => {

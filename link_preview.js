@@ -1,22 +1,5 @@
-﻿const DEFAULT_SETTINGS = {
-    iconDisplayDelay: 200,
-    iconDisplayTime: 2000,
-    iconDisplayOffsetX: -30,
-    iconDisplayOffsetY: -30,
-    frameDisplayDelay: 500,
-    frameDisplayTime: 2000,
-    frameUpdateTime: 200,
-    bodyRightMarginWidthPx: 800,
-    previewWidthPx: 800,
-    ignoreXFrameOptions: false, // 他の設定値と同様に扱う
-    ignoreContentSecurityPolicy: false, // 他の設定値と同様に扱う
-    debugMode: false, // 他の設定値と同様に扱う
-    urlFilterList: "", // 改行区切りの文字列リスト
-    keepPreviewFrameOpen: false // プレビューを常に固定する
+﻿// `import` 文を削除し、グローバルスコープの `DEFAULT_SETTINGS` を利用
 
-};
-
-// 初期値の直接定義を削除
 let ICON_DISPLAY_DELAY;
 let ICON_DISPLAY_TIME;
 let ICON_DISPLAY_OFFSET_X; // 変更: OFFSET_X -> ICON_DISPLAY_OFFSET_X
@@ -40,9 +23,7 @@ function debugLog(message, data = null) {
 
 debugLog("link_preview.js is loaded");
 
-// 設定を動的に更新する関数
 function updateSettings() {
-    // ストレージから設定を取得
     browser.storage.local.get(
         Object.fromEntries(
             Object.keys(DEFAULT_SETTINGS).map(key => [`SLPGC_${key}`, DEFAULT_SETTINGS[key]])
@@ -57,9 +38,9 @@ function updateSettings() {
         FRAME_UPDATE_TIME = settings.SLPGC_frameUpdateTime || DEFAULT_SETTINGS.frameUpdateTime;
         BODY_RIGHT_MARGIN_WIDTH_PX = settings.SLPGC_bodyRightMarginWidthPx || DEFAULT_SETTINGS.bodyRightMarginWidthPx;
         PREVIEW_WIDTH_PX = settings.SLPGC_previewWidthPx || DEFAULT_SETTINGS.previewWidthPx;
-        IGNORE_X_FRAME_OPTIONS = settings.SLPGC_ignoreXFrameOptions || DEFAULT_SETTINGS.ignoreXFrameOptions; // 追加
-        IGNORE_CONTENT_SECURITY_POLICY = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy; // 追加
-        DEBUG_MODE = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode; // 追加
+        IGNORE_X_FRAME_OPTIONS = settings.SLPGC_ignoreXFrameOptions || DEFAULT_SETTINGS.ignoreXFrameOptions;
+        IGNORE_CONTENT_SECURITY_POLICY = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
+        DEBUG_MODE = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode;
 
         // タイマーのタイムアウト値を更新
         preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
@@ -78,7 +59,6 @@ function updateSettings() {
             document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
         }
 
-        // デバッグ用ログ
         debugLog("設定が更新されました:", {
             ICON_DISPLAY_DELAY,
             ICON_DISPLAY_TIME,
@@ -98,6 +78,21 @@ function updateSettings() {
 
 // 初期設定を読み込む
 updateSettings();
+
+// 初回起動時にデフォルト設定を保存
+browser.storage.local.get(
+    Object.fromEntries(
+        Object.keys(DEFAULT_SETTINGS).map(key => [`SLPGC_${key}`, DEFAULT_SETTINGS[key]])
+    )
+).then((settings) => {
+    if (Object.keys(settings).length === 0) {
+        browser.storage.local.set(
+            Object.fromEntries(
+                Object.entries(DEFAULT_SETTINGS).map(([key, value]) => [`SLPGC_${key}`, value])
+            )
+        );
+    }
+});
 
 // 設定が変更されたときに再読み込み
 browser.storage.onChanged.addListener((changes, area) => {
