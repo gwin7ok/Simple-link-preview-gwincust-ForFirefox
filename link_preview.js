@@ -5,7 +5,9 @@
     offsetY: -30,
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
-    frameUpdateTime: 200
+    frameUpdateTime: 200,
+    rightMarginWidth: 800,
+    widthPercentage: 50
 };
 
 // 初期値の直接定義を削除
@@ -16,6 +18,8 @@ let OFFSET_Y;
 let FRAME_DISPLAY_DELAY;
 let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
+let RIGHT_MARGIN_WIDTH;
+let WIDTH_PERCENTAGE;
 
 function debugLog(message, data = null) {
     browser.storage.local.get("debugMode").then((settings) => {
@@ -37,6 +41,8 @@ function updateSettings() {
         FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
         FRAME_DISPLAY_TIME = settings.frameDisplayTime;
         FRAME_UPDATE_TIME = settings.frameUpdateTime;
+        RIGHT_MARGIN_WIDTH = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
+        WIDTH_PERCENTAGE = settings.widthPercentage || DEFAULT_SETTINGS.widthPercentage;
 
         // タイマーのタイムアウト値を更新
         preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
@@ -44,6 +50,11 @@ function updateSettings() {
         preview_frame.show_timer.updateTimeout(FRAME_DISPLAY_DELAY);
         preview_frame.hide_timer.updateTimeout(FRAME_DISPLAY_TIME);
         preview_frame.update_timer.updateTimeout(FRAME_UPDATE_TIME);
+
+        // プレビューウィンドウの幅を再設定
+        if (preview_frame.frame) {
+            preview_frame.frame.style.width = `${WIDTH_PERCENTAGE}%`;
+        }
 
         // デバッグ用ログ
         debugLog("設定が更新されました:", {
@@ -53,7 +64,9 @@ function updateSettings() {
             OFFSET_Y,
             FRAME_DISPLAY_DELAY,
             FRAME_DISPLAY_TIME,
-            FRAME_UPDATE_TIME
+            FRAME_UPDATE_TIME,
+            RIGHT_MARGIN_WIDTH,
+            WIDTH_PERCENTAGE
         });
     });
 }
@@ -178,8 +191,9 @@ class PreviewFrame {
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
     }
+
     get display() {
-        return this._display
+        return this._display;
     }
 
     show(url) {
@@ -188,14 +202,16 @@ class PreviewFrame {
         this.hide_timer.stop();
 
         // body要素の右マージンを設定
-        document.body.style.marginRight = '800px'; // プレビューウィンドウの幅に合わせて調整
+        document.body.style.marginRight = `${RIGHT_MARGIN_WIDTH}px`; // コンテンツの右マージン幅に合わせて調整
     }
+
     _show() {
         this._display = true;
         debugLog("プレビューを表示します:", this.url);
         this.iframe.src = this.url;
         this.frame.style.visibility = 'visible';
     }
+
     hide() {
         if (!this.locked) {
             this.hide_timer.start();
@@ -203,6 +219,7 @@ class PreviewFrame {
         this.show_timer.stop();
         this.update_timer.stop();
     }
+
     _hide() {
         this._display = false;
         debugLog("プレビューを非表示にします");
@@ -212,11 +229,13 @@ class PreviewFrame {
         // body要素の右マージンをリセット
         document.body.style.marginRight = '0';
     }
+
     update(url) {
         this.url = url;
         this.hide_timer.stop();
         this.update_timer.start();
     }
+
     _update() {
         if (this.iframe.src != this.url) {
             debugLog("プレビューを更新します:", this.url);
@@ -224,6 +243,7 @@ class PreviewFrame {
         }
         this.hide_timer.stop();
     }
+
     build_frame() {
         let frame = document.createElement("div");
         frame.setAttribute("id", "lprv_frame");
@@ -245,13 +265,10 @@ class PreviewFrame {
           </div>
           <div id="lprv_vresize"></div>
           <iframe id="lprv_content"></iframe>
-                             `
-//          <iframe id="lprv_content" style="background-color: white;"></iframe>
-        browser.storage.local.get("width_percentage").then((settings) => {
-            if (settings.width_percentage) {
-                frame.style.width = settings.width_percentage + "%";
-            }
-        });
+        `;
+
+        // プレビューウィンドウの幅を設定
+        frame.style.width = `${WIDTH_PERCENTAGE}%`;
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));

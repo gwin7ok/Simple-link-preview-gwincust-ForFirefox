@@ -8,7 +8,9 @@ const DEFAULT_SETTINGS = {
     frameUpdateTime: 200,
     ignoreXFrameOptions: false,
     ignoreContentSecurityPolicy: false,
-    debugMode: false // デバッグモードのデフォルト値
+    debugMode: false, // デバッグモードのデフォルト値
+    rightMarginWidth: 800, // コンテンツの右マージン幅の初期値
+    widthPercentage: 50 // プレビューウィンドウの幅の初期値（%）
 };
 
 function debugLog(message, data = null) {
@@ -42,6 +44,8 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('debug-mode').checked = settings.debugMode || DEFAULT_SETTINGS.debugMode;
         document.getElementById('ignore-x-frame-options').checked = settings.ignoreXFrameOptions;
         document.getElementById('ignore-content-security-policy').checked = settings.ignoreContentSecurityPolicy;
+        document.getElementById('right-margin-width').value = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
+        document.getElementById('width-percentage').value = settings.widthPercentage || DEFAULT_SETTINGS.widthPercentage;
     });
 
     // 設定を保存する
@@ -56,6 +60,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const debugMode = document.getElementById('debug-mode').checked;
         const ignoreXFrameOptions = document.getElementById('ignore-x-frame-options').checked;
         const ignoreContentSecurityPolicy = document.getElementById('ignore-content-security-policy').checked;
+        const rightMarginWidth = parseInt(document.getElementById('right-margin-width').value, 10);
+        const widthPercentage = parseInt(document.getElementById('width-percentage').value, 10);
 
         browser.storage.local.set({
             iconDisplayDelay,
@@ -67,7 +73,9 @@ document.addEventListener('DOMContentLoaded', () => {
             frameUpdateTime,
             debugMode,
             ignoreXFrameOptions,
-            ignoreContentSecurityPolicy
+            ignoreContentSecurityPolicy,
+            rightMarginWidth,
+            widthPercentage
         }).then(() => {
             const status = document.getElementById('status');
             status.textContent = '設定を保存しました！';
@@ -82,7 +90,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 frameUpdateTime,
                 debugMode,
                 ignoreXFrameOptions,
-                ignoreContentSecurityPolicy
+                ignoreContentSecurityPolicy,
+                rightMarginWidth,
+                widthPercentage
             });
         });
     });
