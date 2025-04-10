@@ -6,8 +6,8 @@
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
-    rightMarginWidth: 800,
-    widthPx: 800 // プレビューウィンドウの幅の初期値（px）
+    bodyRightMarginWidthPx: 800, // 変更: rightMarginWidth -> bodyRightMarginWidthPx
+    previewWidthPx: 800 // 変更: widthPx -> previewWidthPx
 };
 
 // 初期値の直接定義を削除
@@ -18,8 +18,8 @@ let ICON_DISPLAY_OFFSET_Y; // 変更: OFFSET_Y -> ICON_DISPLAY_OFFSET_Y
 let FRAME_DISPLAY_DELAY;
 let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
-let RIGHT_MARGIN_WIDTH;
-let WIDTH_PX;
+let BODY_RIGHT_MARGIN_WIDTH_PX; // 変更: RIGHT_MARGIN_WIDTH -> BODY_RIGHT_MARGIN_WIDTH_PX
+let PREVIEW_WIDTH_PX; // 変更: WIDTH_PX -> PREVIEW_WIDTH_PX
 
 function debugLog(message, data = null) {
     browser.storage.local.get("debugMode").then((settings) => {
@@ -36,13 +36,13 @@ function updateSettings() {
     browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
         ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
         ICON_DISPLAY_TIME = settings.iconDisplayTime;
-        ICON_DISPLAY_OFFSET_X = settings.iconDisplayOffsetX; // 変更: offsetX -> iconDisplayOffsetX
-        ICON_DISPLAY_OFFSET_Y = settings.iconDisplayOffsetY; // 変更: offsetY -> iconDisplayOffsetY
+        ICON_DISPLAY_OFFSET_X = settings.iconDisplayOffsetX;
+        ICON_DISPLAY_OFFSET_Y = settings.iconDisplayOffsetY;
         FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
         FRAME_DISPLAY_TIME = settings.frameDisplayTime;
         FRAME_UPDATE_TIME = settings.frameUpdateTime;
-        RIGHT_MARGIN_WIDTH = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
-        WIDTH_PX = settings.widthPx || DEFAULT_SETTINGS.widthPx;
+        BODY_RIGHT_MARGIN_WIDTH_PX = settings.bodyRightMarginWidthPx || DEFAULT_SETTINGS.bodyRightMarginWidthPx;
+        PREVIEW_WIDTH_PX = settings.previewWidthPx || DEFAULT_SETTINGS.previewWidthPx;
 
         // タイマーのタイムアウト値を更新
         preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
@@ -53,12 +53,12 @@ function updateSettings() {
 
         // プレビューウィンドウの幅を再設定
         if (preview_frame.frame) {
-            preview_frame.frame.style.width = `${WIDTH_PX}px`;
+            preview_frame.frame.style.width = `${PREVIEW_WIDTH_PX}px`;
         }
 
         // プレビューウィンドウが表示されている場合、右マージン幅を更新
         if (preview_frame.display) {
-            document.body.style.marginRight = `${RIGHT_MARGIN_WIDTH}px`;
+            document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
         }
 
         // デバッグ用ログ
@@ -70,8 +70,8 @@ function updateSettings() {
             FRAME_DISPLAY_DELAY,
             FRAME_DISPLAY_TIME,
             FRAME_UPDATE_TIME,
-            RIGHT_MARGIN_WIDTH,
-            WIDTH_PX
+            BODY_RIGHT_MARGIN_WIDTH_PX,
+            PREVIEW_WIDTH_PX
         });
     });
 }
@@ -170,8 +170,8 @@ class PreviewIcon {
     }
 
     _getIconPosition(cursorX, cursorY) {
-        const posX = cursorX + ICON_DISPLAY_OFFSET_X; // 変更: OFFSET_X -> ICON_DISPLAY_OFFSET_X
-        const posY = cursorY + ICON_DISPLAY_OFFSET_Y; // 変更: OFFSET_Y -> ICON_DISPLAY_OFFSET_Y
+        const posX = cursorX + ICON_DISPLAY_OFFSET_X;
+        const posY = cursorY + ICON_DISPLAY_OFFSET_Y;
         return { x: posX, y: posY };
     }
 
@@ -207,7 +207,7 @@ class PreviewFrame {
         this.hide_timer.stop();
 
         // body要素の右マージンを設定
-        document.body.style.marginRight = `${RIGHT_MARGIN_WIDTH}px`; // コンテンツの右マージン幅に合わせて調整
+        document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
     }
 
     _show() {
@@ -272,7 +272,7 @@ class PreviewFrame {
         `;
 
         // プレビューウィンドウの幅を設定
-        frame.style.width = `${WIDTH_PX}px`;
+        frame.style.width = `${PREVIEW_WIDTH_PX}px`;
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
