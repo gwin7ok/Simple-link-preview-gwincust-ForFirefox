@@ -268,7 +268,6 @@ class PreviewFrame {
               <button class="lprv_btn" id="hide" title="Hide preview frame"></button>
             </div>
           </div>
-          <div id="lprv_vresize"></div>
           <iframe id="lprv_content"></iframe>
         `;
 
@@ -280,8 +279,6 @@ class PreviewFrame {
         frame.querySelector('#open_tab').addEventListener("click", this._on_open_tab_click.bind(this));
         frame.querySelector('#push-pin').addEventListener("click", this._on_push_pin_click.bind(this));
         frame.querySelector('#hide').addEventListener("click", this._on_hide_click.bind(this));
-
-        frame.querySelector('#lprv_vresize').addEventListener("mousedown", this._on_vresizer_mousedown.bind(this));
 
         document.body.appendChild(frame);
         frame.addEventListener("mouseenter", this._on_mouseover.bind(this));
@@ -320,34 +317,6 @@ class PreviewFrame {
         if (!this.locked) {
             this.hide_timer.start();
         }
-    }
-
-    _on_vresizer_mousedown(e) {
-        const document_width = document.body.clientWidth;
-
-        let frame = this.frame;
-        let resizer = frame.querySelector('#lprv_vresize');
-        resizer.style.width = '100%';
-
-        const old_document_onmousedown = document.onmousedown;
-        document.onmousedown = () => { return false; };
-
-        document.onmousemove = function (e) {
-            const width = document_width - e.clientX;
-            frame.style.width = width + 'px';
-        };
-
-        document.onmouseup = function () {
-            resizer.style.width = null;
-            const width_px = frame.clientWidth;
-            frame.style.width = `${width_px}px`;
-            browser.storage.local.set({
-                widthPx: width_px
-            });
-            document.onmousemove = null;
-            document.onmouseup = null;
-            document.onmousedown = old_document_onmousedown;
-        };
     }
 }
 
