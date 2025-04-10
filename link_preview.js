@@ -10,7 +10,8 @@
     previewWidthPx: 800,
     ignoreXFrameOptions: false, // 他の設定値と同様に扱う
     ignoreContentSecurityPolicy: false, // 他の設定値と同様に扱う
-    debugMode: false // 他の設定値と同様に扱う
+    debugMode: false, // 他の設定値と同様に扱う
+    urlFilterList: "", // 改行区切りの文字列リスト
 };
 
 // 初期値の直接定義を削除
@@ -99,7 +100,16 @@ updateSettings();
 // 設定が変更されたときに再読み込み
 browser.storage.onChanged.addListener((changes, area) => {
     if (area === "local") {
+        // 設定の更新
         updateSettings();
+
+        // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
+        if (changes.SLPGC_previewEnabled && changes.SLPGC_previewEnabled.newValue === false) {
+            if (preview_frame.display) {
+                preview_frame.hide();
+                debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+            }
+        }
     }
 });
 
@@ -236,11 +246,16 @@ class PreviewFrame {
     }
 
     hide() {
-        if (!this.locked) {
-            this.hide_timer.start();
-        }
-        this.show_timer.stop();
-        this.update_timer.stop();
+        // プレビュー機能がOFFの場合、またはロックされていない場合に非表示にする
+        browser.storage.local.get("SLPGC_previewEnabled").then((settings) => {
+            if (!settings.SLPGC_previewEnabled || !this.locked) {
+                this.hide_timer.start();
+                this.show_timer.stop();
+                this.update_timer.stop();
+            } else {
+                debugLog("プレビューがロックされているため、非表示にしません");
+            }
+        });
     }
 
     _hide() {
