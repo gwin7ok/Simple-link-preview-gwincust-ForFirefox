@@ -218,7 +218,9 @@ class PreviewIcon {
 class PreviewFrame {
     constructor() {
         this._display = false;
-        this.locked = false; // 初期値
+        this.locked = false;
+        this.pendingUrl = null; // 更新間隔中のURL
+        this.currentHoveredUrl = null; // 現在マウスオーバーしているURL
         this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
         this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
         this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME);
@@ -286,16 +288,31 @@ class PreviewFrame {
     }
 
     update(url) {
-        this.url = url;
+        // プレビュー画面に表示されているURLと同じ場合は何もしない
+        if (this.iframe.src === url) {
+            debugLog("プレビュー画面にすでに表示されているURLのため、更新をスキップします:", url);
+            return;
+        }
+
+        // 更新間隔中のURLを設定
+        this.pendingUrl = url;
+
+        // 更新タイマーを開始
         this.hide_timer.stop();
-        this.update_timer.start();
+        this.update_timer.start(); // 更新間隔時間経過後に _update() を呼び出す
     }
 
     _update() {
-        if (this.iframe.src != this.url) {
-            debugLog("プレビューを更新します:", this.url);
-            this.iframe.src = this.url;
+        // 更新間隔時間経過後に現在のマウスオーバーURLと一致している場合のみ更新
+        if (this.pendingUrl && this.pendingUrl === this.currentHoveredUrl) {
+            debugLog("プレビューを更新します:", this.pendingUrl);
+            this.iframe.src = this.pendingUrl;
+        } else {
+            debugLog("更新間隔時間経過後にURLが一致しなかったため、更新をスキップします:", this.pendingUrl);
         }
+
+        // 更新後にリセット
+        this.pendingUrl = null;
         this.hide_timer.stop();
     }
 
@@ -401,6 +418,8 @@ function on_link_mouseover_doc(e) {
                 return;
             }
 
+            preview_frame.currentHoveredUrl = url; // 現在マウスオーバーしているURLを設定
+
             if (preview_frame.display) {
                 preview_frame.update(url);
             } else {
@@ -412,6 +431,7 @@ function on_link_mouseover_doc(e) {
 
 function on_link_mouseout_doc(e) {
     if (e.target.nodeName == 'A') {
+        preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
         if (preview_frame.display) {
             preview_frame.hide();
         }
