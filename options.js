@@ -12,6 +12,7 @@ const DEFAULT_SETTINGS = {
     ignoreContentSecurityPolicy: false,
     debugMode: false,
     urlFilterList: "", // 改行区切りの文字列リスト
+    keepPreviewFrameOpen: false // プレビューを常に固定する
 };
 
 function debugLog(message, data = null) {
@@ -41,6 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-content-security-policy').checked = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
         document.getElementById('debug-mode').checked = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode;
         document.getElementById('url-filter-list').value = settings.SLPGC_urlFilterList || DEFAULT_SETTINGS.urlFilterList;
+        document.getElementById('keep-preview-frame-open').checked = settings.SLPGC_keepPreviewFrameOpen || DEFAULT_SETTINGS.keepPreviewFrameOpen;
     });
 
     document.getElementById('save-settings').addEventListener('click', () => {
@@ -58,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
             ignoreContentSecurityPolicy: document.getElementById('ignore-content-security-policy').checked,
             debugMode: document.getElementById('debug-mode').checked,
             urlFilterList: document.getElementById('url-filter-list').value,
+            keepPreviewFrameOpen: document.getElementById('keep-preview-frame-open').checked,
         };
 
         browser.storage.local.set(
@@ -66,6 +69,9 @@ document.addEventListener('DOMContentLoaded', () => {
             )
         ).then(() => {
             debugLog("設定を保存しました:", settings);
+
+            // 他のタブに通知を送信
+            browser.runtime.sendMessage({ action: "updateKeepPreviewFrameOpen" });
 
             // ステータス表示
             const status = document.getElementById('status');
@@ -89,6 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-content-security-policy').checked = DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
         document.getElementById('debug-mode').checked = DEFAULT_SETTINGS.debugMode;
         document.getElementById('url-filter-list').value = DEFAULT_SETTINGS.urlFilterList;
+        document.getElementById('keep-preview-frame-open').checked = DEFAULT_SETTINGS.keepPreviewFrameOpen;
 
         // ステータス表示
         const status = document.getElementById('status');

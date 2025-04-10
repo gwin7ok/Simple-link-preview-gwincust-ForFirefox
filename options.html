@@ -11,6 +11,11 @@
     <h1>オプション設定</h1>
     <form id="settings-form">
         <label>
+            <input type="checkbox" id="keep-preview-frame-open">
+            プレビューを常に固定する
+        </label>
+        <br>
+        <label>
             アイコン表示遅延 (ms):
             <input type="number" id="icon-display-delay" min="0" step="100">
         </label>
@@ -61,8 +66,8 @@
         </label>
         <br>
         <label>
-            デバッグモード:
-            <input type="checkbox" id="debug-mode">
+                        <input type="checkbox" id="debug-mode">
+            デバッグモード
         </label>
         <br>
         <label>

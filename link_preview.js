@@ -12,6 +12,8 @@
     ignoreContentSecurityPolicy: false, // 他の設定値と同様に扱う
     debugMode: false, // 他の設定値と同様に扱う
     urlFilterList: "", // 改行区切りの文字列リスト
+    keepPreviewFrameOpen: false // プレビューを常に固定する
+
 };
 
 // 初期値の直接定義を削除
@@ -216,12 +218,27 @@ class PreviewIcon {
 class PreviewFrame {
     constructor() {
         this._display = false;
+        this.locked = false; // 初期値
         this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
         this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
         this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME);
-        this.locked = false;
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
+
+        // ローカルストレージからロック状態を読み込む
+        browser.storage.local.get("SLPGC_keepPreviewFrameOpen").then((settings) => {
+            this.locked = settings.SLPGC_keepPreviewFrameOpen || false;
+            this._updatePinButtonState(); // ピンボタンの状態を更新
+        });
+    }
+
+    _updatePinButtonState() {
+        const pinButton = this.frame.querySelector('#push-pin');
+        if (this.locked) {
+            pinButton.setAttribute('locked', 'yes');
+        } else {
+            pinButton.removeAttribute('locked');
+        }
     }
 
     get display() {
@@ -338,6 +355,14 @@ class PreviewFrame {
         this.locked = !this.locked;
         debugLog("プレビューの固定状態を切り替えました:", this.locked);
         this.locked ? btn.setAttribute('locked', 'yes') : btn.removeAttribute('locked');
+
+        // ローカルストレージにロック状態を保存
+        browser.storage.local.set({ SLPGC_keepPreviewFrameOpen: this.locked }).then(() => {
+            // 他のタブに通知を送信
+            browser.runtime.sendMessage({ action: "updateKeepPreviewFrameOpen" });
+        });
+
+        this._updatePinButtonState(); // ピンボタンの状態を更新
     }
     _on_hide_click(e) {
         debugLog("非表示ボタンがクリックされました");
@@ -392,3 +417,15 @@ function on_link_mouseout_doc(e) {
         }
     }
 }
+
+// メッセージリスナーを追加
+browser.runtime.onMessage.addListener((message) => {
+    if (message.action === "updateKeepPreviewFrameOpen") {
+        // ローカルストレージからロック状態を再読み込み
+        browser.storage.local.get("SLPGC_keepPreviewFrameOpen").then((settings) => {
+            preview_frame.locked = settings.SLPGC_keepPreviewFrameOpen || false;
+            preview_frame._updatePinButtonState(); // ピンボタンの状態を更新
+            debugLog("ピンの状態を更新しました:", preview_frame.locked);
+        });
+    }
+});
