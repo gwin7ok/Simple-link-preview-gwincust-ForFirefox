@@ -1,8 +1,8 @@
 const DEFAULT_SETTINGS = {
     iconDisplayDelay: 200,
     iconDisplayTime: 2000,
-    offsetX: -30,
-    offsetY: -30,
+    iconDisplayOffsetX: -30, // 変更: offsetX -> iconDisplayOffsetX
+    iconDisplayOffsetY: -30, // 変更: offsetY -> iconDisplayOffsetY
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
@@ -37,8 +37,8 @@ document.addEventListener('DOMContentLoaded', () => {
         // フォームに値を設定
         document.getElementById('icon-display-delay').value = settings.iconDisplayDelay || DEFAULT_SETTINGS.iconDisplayDelay;
         document.getElementById('icon-display-time').value = settings.iconDisplayTime || DEFAULT_SETTINGS.iconDisplayTime;
-        document.getElementById('offset-x').value = settings.offsetX || DEFAULT_SETTINGS.offsetX;
-        document.getElementById('offset-y').value = settings.offsetY || DEFAULT_SETTINGS.offsetY;
+        document.getElementById('icon-display-offset-x').value = settings.iconDisplayOffsetX || DEFAULT_SETTINGS.iconDisplayOffsetX; // 修正
+        document.getElementById('icon-display-offset-y').value = settings.iconDisplayOffsetY || DEFAULT_SETTINGS.iconDisplayOffsetY; // 修正
         document.getElementById('frame-display-delay').value = settings.frameDisplayDelay || DEFAULT_SETTINGS.frameDisplayDelay;
         document.getElementById('frame-display-time').value = settings.frameDisplayTime || DEFAULT_SETTINGS.frameDisplayTime;
         document.getElementById('frame-update-time').value = settings.frameUpdateTime || DEFAULT_SETTINGS.frameUpdateTime;
@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('ignore-x-frame-options').checked = settings.ignoreXFrameOptions;
         document.getElementById('ignore-content-security-policy').checked = settings.ignoreContentSecurityPolicy;
         document.getElementById('right-margin-width').value = settings.rightMarginWidth || DEFAULT_SETTINGS.rightMarginWidth;
-        
         document.getElementById('width-px').value = settings.widthPx || DEFAULT_SETTINGS.widthPx;
     });
 
@@ -54,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('save-settings').addEventListener('click', () => {
         const iconDisplayDelay = parseInt(document.getElementById('icon-display-delay').value, 10);
         const iconDisplayTime = parseInt(document.getElementById('icon-display-time').value, 10);
-        const offsetX = parseInt(document.getElementById('offset-x').value, 10);
-        const offsetY = parseInt(document.getElementById('offset-y').value, 10);
+        const iconDisplayOffsetX = parseInt(document.getElementById('icon-display-offset-x').value, 10); // 修正
+        const iconDisplayOffsetY = parseInt(document.getElementById('icon-display-offset-y').value, 10); // 修正
         const frameDisplayDelay = parseInt(document.getElementById('frame-display-delay').value, 10);
         const frameDisplayTime = parseInt(document.getElementById('frame-display-time').value, 10);
         const frameUpdateTime = parseInt(document.getElementById('frame-update-time').value, 10);
@@ -63,14 +62,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const ignoreXFrameOptions = document.getElementById('ignore-x-frame-options').checked;
         const ignoreContentSecurityPolicy = document.getElementById('ignore-content-security-policy').checked;
         const rightMarginWidth = parseInt(document.getElementById('right-margin-width').value, 10);
-        
         const widthPx = parseInt(document.getElementById('width-px').value, 10);
 
         browser.storage.local.set({
             iconDisplayDelay,
             iconDisplayTime,
-            offsetX,
-            offsetY,
+            iconDisplayOffsetX, // 修正
+            iconDisplayOffsetY, // 修正
             frameDisplayDelay,
             frameDisplayTime,
             frameUpdateTime,
@@ -86,8 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
             debugLog("設定を保存しました:", {
                 iconDisplayDelay,
                 iconDisplayTime,
-                offsetX,
-                offsetY,
+                iconDisplayOffsetX, // 修正
+                iconDisplayOffsetY, // 修正
                 frameDisplayDelay,
                 frameDisplayTime,
                 frameUpdateTime,

@@ -1,8 +1,8 @@
 ﻿const DEFAULT_SETTINGS = {
     iconDisplayDelay: 200,
     iconDisplayTime: 2000,
-    offsetX: -30,
-    offsetY: -30,
+    iconDisplayOffsetX: -30, // 変更: offsetX -> iconDisplayOffsetX
+    iconDisplayOffsetY: -30, // 変更: offsetY -> iconDisplayOffsetY
     frameDisplayDelay: 200,
     frameDisplayTime: 2000,
     frameUpdateTime: 200,
@@ -13,8 +13,8 @@
 // 初期値の直接定義を削除
 let ICON_DISPLAY_DELAY;
 let ICON_DISPLAY_TIME;
-let OFFSET_X;
-let OFFSET_Y;
+let ICON_DISPLAY_OFFSET_X; // 変更: OFFSET_X -> ICON_DISPLAY_OFFSET_X
+let ICON_DISPLAY_OFFSET_Y; // 変更: OFFSET_Y -> ICON_DISPLAY_OFFSET_Y
 let FRAME_DISPLAY_DELAY;
 let FRAME_DISPLAY_TIME;
 let FRAME_UPDATE_TIME;
@@ -36,8 +36,8 @@ function updateSettings() {
     browser.storage.local.get(DEFAULT_SETTINGS).then((settings) => {
         ICON_DISPLAY_DELAY = settings.iconDisplayDelay;
         ICON_DISPLAY_TIME = settings.iconDisplayTime;
-        OFFSET_X = settings.offsetX;
-        OFFSET_Y = settings.offsetY;
+        ICON_DISPLAY_OFFSET_X = settings.iconDisplayOffsetX; // 変更: offsetX -> iconDisplayOffsetX
+        ICON_DISPLAY_OFFSET_Y = settings.iconDisplayOffsetY; // 変更: offsetY -> iconDisplayOffsetY
         FRAME_DISPLAY_DELAY = settings.frameDisplayDelay;
         FRAME_DISPLAY_TIME = settings.frameDisplayTime;
         FRAME_UPDATE_TIME = settings.frameUpdateTime;
@@ -65,8 +65,8 @@ function updateSettings() {
         debugLog("設定が更新されました:", {
             ICON_DISPLAY_DELAY,
             ICON_DISPLAY_TIME,
-            OFFSET_X,
-            OFFSET_Y,
+            ICON_DISPLAY_OFFSET_X,
+            ICON_DISPLAY_OFFSET_Y,
             FRAME_DISPLAY_DELAY,
             FRAME_DISPLAY_TIME,
             FRAME_UPDATE_TIME,
@@ -170,8 +170,8 @@ class PreviewIcon {
     }
 
     _getIconPosition(cursorX, cursorY) {
-        const posX = cursorX + OFFSET_X;
-        const posY = cursorY + OFFSET_Y;
+        const posX = cursorX + ICON_DISPLAY_OFFSET_X; // 変更: OFFSET_X -> ICON_DISPLAY_OFFSET_X
+        const posY = cursorY + ICON_DISPLAY_OFFSET_Y; // 変更: OFFSET_Y -> ICON_DISPLAY_OFFSET_Y
         return { x: posX, y: posY };
     }
 
