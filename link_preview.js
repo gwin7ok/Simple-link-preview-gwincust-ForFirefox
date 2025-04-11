@@ -181,11 +181,19 @@ class PreviewIcon {
     }
 
     show(url) {
-        if (this.icon.style.visibility == 'hidden') {
-            this.url = url;
-            this.show_timer.stop();
-            this.show_timer.start();
+        // 新しい URL をマウスオーバーした場合、既存のアイコンを非表示タイマーで消す
+        if (this.url !== url) {
+            this.hide_timer.start(); // 一定時間後に消す
         }
+
+        this.url = url;
+        this.show_timer.stop();
+        this.show_timer.start();
+    }
+
+    hide() {
+        this.icon.style.visibility = 'hidden';
+        this.hide_timer.stop();
     }
 
     _show() {
@@ -198,7 +206,7 @@ class PreviewIcon {
         this.icon.style.left = pos.x + "px";
         this.icon.style.top = pos.y + "px";
         this.icon.style.visibility = 'visible';
-        this.hide_timer.start();
+        this.hide_timer.start(); // 表示後に非表示タイマーを開始
     }
 
     _hide() {
@@ -286,12 +294,15 @@ class PreviewFrame {
         // プレビュー機能がOFFの場合、またはロックされていない場合に非表示にする
         browser.storage.local.get("SLPGC_previewEnabled").then((settings) => {
             if (!settings.SLPGC_previewEnabled || !this.locked) {
-                this.hide_timer.start();
+                debugLog("プレビューを非表示にするタイマーを開始します");
+                this.hide_timer.start(); // 非表示タイマーを確実に開始
                 this.show_timer.stop();
                 this.update_timer.stop();
             } else {
                 debugLog("プレビューがロックされているため、非表示にしません");
             }
+        }).catch((error) => {
+            debugLog("設定の取得中にエラーが発生しました:", error);
         });
     }
 
@@ -313,13 +324,17 @@ class PreviewFrame {
         }
 
         // 更新タイマーを開始
-        this.hide_timer.stop();
+        this.hide_timer.stop(); // 非表示タイマーを停止
         debugLog("更新間隔タイマーを開始します:", url);
         this.update_timer.start(url); // 引数としてURLを渡す
+
+        // 非表示タイマーを再起動
+        this.hide_timer.start();
     }
 
     _update(url) {
         debugLog("更新間隔タイマーが終了しました。プレビューを更新します:", url);
+
         // マウスポインタがプレビュー画面上にある場合は更新をスキップ
         if (this.frame.matches(':hover')) {
             debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", url);
@@ -333,6 +348,8 @@ class PreviewFrame {
                     // 更新後にリセット
             this.hide_timer.stop();
 
+            // 非表示タイマーを再起動
+            this.hide_timer.start();
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
@@ -342,7 +359,6 @@ class PreviewFrame {
                 this.update(this.currentHoveredUrl);
             }
         }
-
     }
 
     build_frame() {
