@@ -298,6 +298,12 @@ class PreviewFrame {
     }
 
     _update() {
+        // マウスポインタがプレビュー画面上にある場合は更新をスキップ
+        if (this.frame.matches(':hover')) {
+            debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", this.pendingUrl);
+            return;
+        }
+
         // 更新間隔時間経過後に現在のマウスオーバーURLと一致している場合のみ更新
         if (this.pendingUrl && this.pendingUrl === this.currentHoveredUrl) {
             debugLog("プレビューを更新します:", this.pendingUrl);
