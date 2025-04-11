@@ -122,14 +122,14 @@ class Timer {
         this.timeout = timeout;
         this.running = false;
     }
-    start() {
+    start(arg = null) {
         if (!this.running) {
-            this.timer = setTimeout(this._exec.bind(this), this.timeout);
+            this.timer = setTimeout(() => this._exec(arg), this.timeout);
             this.running = true;
         }
     }
-    _exec() {
-        this.func();
+    _exec(arg) {
+        this.func(arg);
         this.running = false;
     }
     stop() {
@@ -218,7 +218,7 @@ class PreviewFrame {
         this.currentHoveredUrl = null; // 現在マウスオーバーしているURL
         this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
         this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
-        this.update_timer = new Timer(this._update.bind(this), FRAME_UPDATE_TIME);
+        this.update_timer = new Timer((url) => this._update(url), FRAME_UPDATE_TIME);
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
 
@@ -294,26 +294,31 @@ class PreviewFrame {
 
         // 更新タイマーを開始
         this.hide_timer.stop();
-        this.update_timer.start(); // 更新間隔時間経過後に _update() を呼び出す
+        this.update_timer.start(url); // 引数としてURLを渡す
     }
 
-    _update() {
+    _update(url) {
         // マウスポインタがプレビュー画面上にある場合は更新をスキップ
         if (this.frame.matches(':hover')) {
-            debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", this.pendingUrl);
+            debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", url);
             return;
         }
 
-        // 更新間隔時間経過後に現在のマウスオーバーURLと一致している場合のみ更新
-        if (this.pendingUrl && this.pendingUrl === this.currentHoveredUrl) {
-            debugLog("プレビューを更新します:", this.pendingUrl);
-            this.iframe.src = this.pendingUrl;
+        // 更新時間経過後にマウスオーバーしているURLと一致している場合のみ更新
+        if (url && url === this.currentHoveredUrl) {
+            debugLog("プレビューを更新します:", url);
+            this.iframe.src = url;
         } else {
-            debugLog("更新間隔時間経過後にURLが一致しなかったため、更新をスキップします:", this.pendingUrl);
+            debugLog("更新時間経過後にURLが一致しなかったため、更新をスキップします:", url);
+
+            // currentHoveredUrl が有効な URL の場合、再度 update() を呼び出す
+            if (this.currentHoveredUrl) {
+                debugLog("マウスポインタが移動後のURLでプレビューを更新します:", this.currentHoveredUrl);
+                this.update(this.currentHoveredUrl);
+            }
         }
 
         // 更新後にリセット
-        this.pendingUrl = null;
         this.hide_timer.stop();
     }
 
