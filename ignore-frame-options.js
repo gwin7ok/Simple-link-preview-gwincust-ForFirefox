@@ -1,4 +1,15 @@
-﻿// https://addons.mozilla.org/ru/firefox/addon/ignore-x-frame-options/reviews/
+﻿/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+Original work: Simple Link Preview by Lecron (https://addons.mozilla.org/ja/firefox/addon/simple-link-preview/)
+Copyright (c) 2024 Lecron
+
+Modifications by gwin7ok
+Copyright (c) 2025 gwin7ok
+*/
+
+// https://addons.mozilla.org/ru/firefox/addon/ignore-x-frame-options/reviews/
 // https://gist.github.com/dergachev/e216b25d9a144914eae2
 // https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/webRequest/onHeadersReceived
 

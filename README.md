@@ -1,14 +1,12 @@
 # Simple Link Preview
 
-このアドオンは、リンクにマウスオーバーするだけでリンク先のプレビューを表示する便利なツールです。リンク先を確認するためにページを離れる必要がなく、効率的にウェブを閲覧できます。
+このアドオンは、「Simple Link Preview」（Lecron氏作）のフォーク・改変版です。  
+元のアドオン：https://addons.mozilla.org/ja/firefox/addon/simple-link-preview/  
+ライセンス：Mozilla Public License 2.0  
 
 ---
 
-## 元のアドオン
-
-このプロジェクトは、以下の Firefox アドオンをベースにしています：
-
-[Simple Link Preview](https://addons.mozilla.org/ja/firefox/addon/simple-link-preview/?utm_content=addons-manager-reviews-link&utm_medium=firefox-browser&utm_source=firefox-browser)
+このアドオンは、リンクにマウスオーバーするだけでリンク先のプレビューを表示する便利なツールです。リンク先を確認するためにページを離れる必要がなく、効率的にウェブを閲覧できます。
 
 ---
 

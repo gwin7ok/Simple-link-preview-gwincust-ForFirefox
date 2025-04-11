@@ -1,3 +1,14 @@
+/*
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
+
+Original work: Simple Link Preview by Lecron (https://addons.mozilla.org/ja/firefox/addon/simple-link-preview/)
+Copyright (c) 2024 Lecron
+
+Modifications by gwin7ok
+Copyright (c) 2025 gwin7ok
+*/
+
 if (typeof DEFAULT_SETTINGS === 'undefined') {
     console.error("DEFAULT_SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {

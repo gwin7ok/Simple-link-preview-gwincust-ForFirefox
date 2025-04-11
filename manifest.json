@@ -2,7 +2,8 @@
   "manifest_version": 2,
   "name": "Simple link preview gwincust",
   "version": "2.0.1",
-  "description": "Preview links without leaving your current page.",
+  "description": "Preview links without leaving your current page. (Forked and modified from 'Simple Link Preview' by Lecron)",
+  "author": "gwin7ok",
   "icons": {
     "64": "images/logo_big.png"
   },
@@ -13,7 +14,7 @@
         "settings.js",
         "link_preview.js",
         "options.js"
-    ],
+      ],
       "css": ["link_preview.css"]
     }
   ],
