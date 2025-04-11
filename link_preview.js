@@ -118,28 +118,40 @@ browser.storage.local.get({ SLPGC_previewEnabled: true }).then((data) => { // �
 
 class Timer {
     constructor(func, timeout) {
-        this.func = func;
-        this.timeout = timeout;
-        this.running = false;
+        this.func = func;       // タイマーが終了したときに実行する関数
+        this.timeout = timeout; // タイムアウト時間（ミリ秒）
+        this.timer = null;      // 現在のタイマーIDを保持
+        this.running = false;   // タイマーが動作中かどうかを示すフラグ
     }
+
     start(arg = null) {
-        if (!this.running) {
-            this.timer = setTimeout(() => this._exec(arg), this.timeout);
-            this.running = true;
-        }
-    }
-    _exec(arg) {
-        this.func(arg);
-        this.running = false;
-    }
-    stop() {
+        // 既存のタイマーが動作中の場合はキャンセル
         if (this.running) {
             clearTimeout(this.timer);
-            this.running = false;
+        }
+
+        // 新しいタイマーを開始
+        this.timer = setTimeout(() => this._exec(arg), this.timeout);
+        this.running = true; // タイマーが動作中であることを記録
+    }
+
+    _exec(arg) {
+        this.func(arg);      // 指定された関数を引数付きで実行
+        this.running = false; // タイマーが終了したことを記録
+        this.timer = null;    // タイマーIDをリセット
+    }
+
+    stop() {
+        // 動作中のタイマーを停止
+        if (this.running) {
+            clearTimeout(this.timer);
+            this.running = false; // タイマーが停止したことを記録
+            this.timer = null;    // タイマーIDをリセット
         }
     }
+
     updateTimeout(newTimeout) {
-        this.timeout = newTimeout; // タイムアウト値を更新
+        this.timeout = newTimeout; // タイムアウト時間を更新
     }
 }
 
@@ -289,37 +301,37 @@ class PreviewFrame {
             return;
         }
 
-        // 更新間隔中のURLを設定
-        this.pendingUrl = url;
-
         // 更新タイマーを開始
         this.hide_timer.stop();
+        debugLog("更新間隔タイマーを開始します:", url);
         this.update_timer.start(url); // 引数としてURLを渡す
     }
 
     _update(url) {
+        debugLog("更新間隔タイマーが終了しました。プレビューを更新します:", url);
         // マウスポインタがプレビュー画面上にある場合は更新をスキップ
         if (this.frame.matches(':hover')) {
             debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", url);
             return;
         }
-
+        debugLog("マウスポインタがプレビュー画面上にないため、URLの更新を実行します:", url);
         // 更新時間経過後にマウスオーバーしているURLと一致している場合のみ更新
         if (url && url === this.currentHoveredUrl) {
-            debugLog("プレビューを更新します:", url);
+            debugLog("更新時間経過前後でマウスオーバーしているURLが一致しているのでプレビューを更新します:", url);
             this.iframe.src = url;
+                    // 更新後にリセット
+            this.hide_timer.stop();
+
         } else {
-            debugLog("更新時間経過後にURLが一致しなかったため、更新をスキップします:", url);
+            debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
             // currentHoveredUrl が有効な URL の場合、再度 update() を呼び出す
             if (this.currentHoveredUrl) {
-                debugLog("マウスポインタが移動後のURLでプレビューを更新します:", this.currentHoveredUrl);
+                debugLog("マウスポインタが移動後にURLをマウスオーバーしているので再度更新を試みます:", this.currentHoveredUrl);
                 this.update(this.currentHoveredUrl);
             }
         }
 
-        // 更新後にリセット
-        this.hide_timer.stop();
     }
 
     build_frame() {
@@ -431,8 +443,11 @@ function on_link_mouseover_doc(e) {
             } else {
                 preview_icon.show(url, e.clientX, e.clientY);
             }
-        }
-    });
+        }else {
+        debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", e.target.nodeName);
+        preview_frame.currentHoveredUrl = null; // マウスオーバーした要素が<a>タグではない場合、URLをリセット
+        }   
+    })  ;
 }
 
 function on_link_mouseout_doc(e) {
