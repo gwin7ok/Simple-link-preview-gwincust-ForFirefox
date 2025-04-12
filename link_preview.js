@@ -114,7 +114,7 @@ browser.storage.onChanged.addListener((changes, area) => {
         // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
         if (changes.SLPGC_previewEnabled && changes.SLPGC_previewEnabled.newValue === false) {
             if (preview_frame.display) {
-                preview_frame.hide();
+                preview_frame._hide(); // タイマーを使わずに即座に非表示にする
                 debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
             }
         }
@@ -293,9 +293,14 @@ class PreviewFrame {
     hide() {
         // プレビュー機能がOFFの場合、またはロックされていない場合に非表示にする
         browser.storage.local.get("SLPGC_previewEnabled").then((settings) => {
-            if (!settings.SLPGC_previewEnabled || !this.locked) {
-                debugLog("プレビューを非表示にするタイマーを開始します");
-                this.hide_timer.start(); // 非表示タイマーを確実に開始
+            if (!settings.SLPGC_previewEnabled) {
+                debugLog("プレビュー機能がOFFのため、非表示にします");
+                this.hide_timer.start();
+                this.show_timer.stop();
+                this.update_timer.stop();
+            } else if (!this.locked) {
+                debugLog("プレビューがロックされていないため、非表示にします");
+                this.hide_timer.start();
                 this.show_timer.stop();
                 this.update_timer.stop();
             } else {
@@ -328,8 +333,6 @@ class PreviewFrame {
         debugLog("更新間隔タイマーを開始します:", url);
         this.update_timer.start(url); // 引数としてURLを渡す
 
-        // 非表示タイマーを再起動
-        this.hide_timer.start();
     }
 
     _update(url) {
@@ -345,11 +348,6 @@ class PreviewFrame {
         if (url && url === this.currentHoveredUrl) {
             debugLog("更新時間経過前後でマウスオーバーしているURLが一致しているのでプレビューを更新します:", url);
             this.iframe.src = url;
-                    // 更新後にリセット
-            this.hide_timer.stop();
-
-            // 非表示タイマーを再起動
-            this.hide_timer.start();
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
@@ -359,6 +357,7 @@ class PreviewFrame {
                 this.update(this.currentHoveredUrl);
             }
         }
+        this.hide(); // 更新後に非表示タイマーを開始
     }
 
     build_frame() {
@@ -434,9 +433,7 @@ class PreviewFrame {
         this.hide_timer.stop();
     }
     _on_mouseout(e) {
-        if (!this.locked) {
-            this.hide_timer.start();
-        }
+        this.hide();
     }
 }
 
