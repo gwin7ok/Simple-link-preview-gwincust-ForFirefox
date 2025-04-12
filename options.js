@@ -45,34 +45,40 @@ async function initializeSettings() {
     });
 }
 
-// 初期化関数を呼び出す
-initializeSettings();
+if (document.location.pathname.endsWith('options.html')) {
+    console.log("options.html が読み込まれました。スクリプトを実行します。");
 
-// 設定を保存
-document.getElementById('save-settings').addEventListener('click', () => {
-    for (const [key, config] of Object.entries(SETTINGS)) {
-        if (!config.elementId) continue;
+    // 初期化関数を呼び出す
+    initializeSettings();
 
-        const element = document.getElementById(config.elementId);
-        if (element) {
-            let newValue;
+    // 設定を保存
+    document.getElementById('save-settings').addEventListener('click', () => {
+        for (const [key, config] of Object.entries(SETTINGS)) {
+            if (!config.elementId) continue;
 
-            // フォーム要素の値を取得
-            if (element.type === "checkbox") {
-                newValue = element.checked; // チェックボックスの場合
+            const element = document.getElementById(config.elementId);
+            if (element) {
+                let newValue;
+
+                // フォーム要素の値を取得
+                if (element.type === "checkbox") {
+                    newValue = element.checked; // チェックボックスの場合
+                } else {
+                    newValue = element.value; // テキストや数値入力の場合
+                }
+
+                // デバッグログで値を確認
+                debugLog(`取得した値: ${key} = ${newValue} (elementId: ${config.elementId})`);
+
+                // 設定を更新
+                updateSetting(key, newValue).then(() => {
+                    debugLog(`設定を保存しました: ${key} = ${newValue}`);
+                });
             } else {
-                newValue = element.value; // テキストや数値入力の場合
+                debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);
             }
-
-            // デバッグログで値を確認
-            debugLog(`取得した値: ${key} = ${newValue} (elementId: ${config.elementId})`);
-
-            // 設定を更新
-            updateSetting(key, newValue).then(() => {
-                debugLog(`設定を保存しました: ${key} = ${newValue}`);
-            });
-        } else {
-            debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);
         }
-    }
-});
+    });
+} else {
+    console.log("options.html 以外のページではスクリプトを実行しません。");
+}

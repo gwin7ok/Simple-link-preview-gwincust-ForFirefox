@@ -17,10 +17,83 @@ if (typeof SETTINGS === 'undefined') {
 
 debugLog("link_preview.js is loaded");
 
+// グローバルスコープで preview_frame と preview_icon を定義
+let preview_frame;
+let preview_icon;
+
+// 関数定義部分を上部に移動
+function on_link_mouseover_doc(e) {
+    if (!SETTINGS.previewEnabled.value) return;
+
+    const linkElement = e.target.closest('a');
+    if (linkElement && linkElement.href) {
+        const url = linkElement.href;
+
+        const filterList = (SETTINGS.urlFilterList.value || "").split("\n").map(s => s.trim()).filter(s => s);
+        if (filterList.some(filter => url.includes(filter))) {
+            debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
+            return;
+        }
+
+        preview_frame.currentHoveredUrl = url;
+
+        if (preview_frame.display) {
+            preview_frame.update(url);
+        } else {
+            preview_icon.show(url, e.clientX, e.clientY);
+        }
+    } else {
+        debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", e.target.nodeName);
+        preview_frame.currentHoveredUrl = null;
+    }
+}
+
+function on_link_mouseout_doc(event) {
+    if (!preview_frame) {
+        debugLog("preview_frame が未定義のため、on_link_mouseout_doc をスキップします");
+        return;
+    }
+
+    if (event.target.nodeName == 'A') {
+        preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
+        if (preview_frame.display) {
+            preview_frame.hide();
+        }
+    }
+}
+
+// メッセージリスナーを追加
+browser.runtime.onMessage.addListener((message) => {
+    switch (message.action) {
+        case "updateKeepPreviewFrameOpen":
+            preview_frame.locked = SETTINGS.keepPreviewFrameOpen.value || false;
+            preview_frame._updatePinButtonState();
+            debugLog("ピンの状態を更新しました:", preview_frame.locked);
+            break;
+
+        case "updatePreviewEnabled":
+            SETTINGS.previewEnabled.value = message.enabled;
+            debugLog("プレビュー機能の状態が更新されました:", message.enabled);
+
+            // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
+            if (!message.enabled && preview_frame.display) {
+                preview_frame._hide();
+            }
+            break;
+
+        default:
+            debugLog("未対応のメッセージアクション:", message.action);
+    }
+});
+
 // PreviewFrame クラスの定義を先頭に移動
 class PreviewFrame {
     constructor() {
         this._display = false;
+
+        // フレームを先に初期化
+        this.frame = this.build_frame();
+        this.iframe = this.frame.querySelector('#lprv_content');
 
         // SETTINGS を使用してロック状態を設定
         this.locked = SETTINGS.keepPreviewFrameOpen.value || false;
@@ -31,8 +104,6 @@ class PreviewFrame {
         this.show_timer = new Timer(this._show.bind(this), SETTINGS.frameDisplayDelay.value);
         this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.frameDisplayTime.value);
         this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
-        this.frame = this.build_frame();
-        this.iframe = this.frame.querySelector('#lprv_content');
     }
 
     _updatePinButtonState() {
@@ -153,7 +224,7 @@ class PreviewFrame {
         `;
 
         // プレビューウィンドウの幅を設定
-        frame.style.width = `${PREVIEW_WIDTH_PX}px`;
+        frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
@@ -215,65 +286,6 @@ class PreviewFrame {
     _on_mouseout(e) {
         this.hide();
     }
-}
-
-// 非同期関数を作成
-async function initialize() {
-    await loadSettings().then(() => {
-        debugLog("設定がロードされました:", SETTINGS);
-        initializePreviewSettings(); // 独自の初期化処理を実行
-    });
-
-    // preview_frame と preview_icon のインスタンスを初期化
-    let preview_frame = new PreviewFrame();
-    let preview_icon = new PreviewIcon();
-
-    // 設定が変更されたときに再読み込み
-    browser.storage.onChanged.addListener(async (changes, area) => {
-        if (area === "local") {
-            await loadSettings().then(() => {
-                initializePreviewSettings(); // 再度初期化処理を実行
-            });
-
-            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
-                if (preview_frame.display) {
-                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
-                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
-                }
-            }
-        }
-    });
-}
-
-// 初期化関数を呼び出す
-initialize();
-
-// 独自の初期化処理をまとめた関数
-function initializePreviewSettings() {
-    // タイマーのタイムアウト値を更新
-    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
-    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
-    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
-    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
-    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
-
-    // プレビューウィンドウの幅を再設定
-    if (preview_frame.frame) {
-        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
-    }
-
-    // プレビューウィンドウが表示されている場合、右マージン幅を更新
-    if (preview_frame.display) {
-        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
-    }
-
-    debugLog("プレビュー設定が反映されました:", SETTINGS);
-}
-
-if (SETTINGS.previewEnabled.value === undefined) {
-    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
-    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
 }
 
 class Timer {
@@ -404,71 +416,67 @@ class PreviewIcon {
     }
 }
 
+// 非同期関数を作成
+async function initialize() {
+    await loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+        initializePreviewSettings(); // 独自の初期化処理を実行
+    });
+
+ 
+    // 設定が変更されたときに再読み込み
+    browser.storage.onChanged.addListener(async (changes, area) => {
+        if (area === "local") {
+            await loadSettings().then(() => {
+                initializePreviewSettings(); // 再度初期化処理を実行
+            });
+
+            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
+            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
+                if (preview_frame.display) {
+                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
+                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+                }
+            }
+        }
+    });
+}
+
+// 初期化関数を呼び出す
+initialize();
+
+// 独自の初期化処理をまとめた関数
+async function initializePreviewSettings() {
+    // preview_frame と preview_icon のインスタンスを初期化
+    preview_frame = new PreviewFrame();
+    preview_icon = new PreviewIcon();
+
+    // タイマーのタイムアウト値を更新
+    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
+
+    // プレビューウィンドウの幅を再設定
+    if (preview_frame.frame) {
+        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+    }
+
+    // プレビューウィンドウが表示されている場合、右マージン幅を更新
+    if (preview_frame.display) {
+        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
+
+    debugLog("プレビュー設定が反映されました:", SETTINGS);
+}
+
+if (SETTINGS.previewEnabled.value === undefined) {
+    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
+    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
+}
+
+// イベントリスナーを追加
 let links = document.querySelectorAll('a');
 document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);
-
-function on_link_mouseover_doc(e) {
-    if (!SETTINGS.previewEnabled.value) return;
-
-    const linkElement = e.target.closest('a');
-    if (linkElement && linkElement.href) {
-        const url = linkElement.href;
-
-        const filterList = (SETTINGS.urlFilterList.value || "").split("\n").map(s => s.trim()).filter(s => s);
-        if (filterList.some(filter => url.includes(filter))) {
-            debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
-            return;
-        }
-
-        preview_frame.currentHoveredUrl = url;
-
-        if (preview_frame.display) {
-            preview_frame.update(url);
-        } else {
-            preview_icon.show(url, e.clientX, e.clientY);
-        }
-    } else {
-        debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", e.target.nodeName);
-        preview_frame.currentHoveredUrl = null;
-    }
-}
-
-// on_link_mouseout_doc 関数の修正
-function on_link_mouseout_doc(event) {
-    if (!preview_frame) {
-        debugLog("preview_frame が未定義のため、on_link_mouseout_doc をスキップします");
-        return;
-    }
-
-    if (e.target.nodeName == 'A') {
-        preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
-        if (preview_frame.display) {
-            preview_frame.hide();
-        }
-    }
-}
-
-// メッセージリスナーを追加
-browser.runtime.onMessage.addListener((message) => {
-    switch (message.action) {
-        case "updateKeepPreviewFrameOpen":
-            preview_frame.locked = SETTINGS.keepPreviewFrameOpen.value || false;
-            preview_frame._updatePinButtonState();
-            debugLog("ピンの状態を更新しました:", preview_frame.locked);
-            break;
-
-        case "updatePreviewEnabled":
-            SETTINGS.previewEnabled.value = message.enabled;
-            debugLog("プレビュー機能の状態が更新されました:", message.enabled);
-
-            // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
-            if (!message.enabled && preview_frame.display) {
-                preview_frame._hide();
-            }
-            break;
-
-        default:
-            debugLog("未対応のメッセージアクション:", message.action);
-    }
-});
