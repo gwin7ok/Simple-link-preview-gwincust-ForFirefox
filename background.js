@@ -59,7 +59,7 @@ browser.browserAction.onClicked.addListener(() => {
 
 // アイコンの状態を更新する関数
 function updateIcon(isEnabled) {
-    const iconPath = isEnabled ? "icons/enabled.png" : "icons/disabled.png";
+    const iconPath = isEnabled ? "images/icon-enabled.png" : "images/icon-disabled.png";
     browser.browserAction.setIcon({ path: iconPath });
 
     // ツールチップを2行に設定
