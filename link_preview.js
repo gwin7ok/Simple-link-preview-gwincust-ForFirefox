@@ -173,6 +173,7 @@ class PreviewIcon {
         this.icon = this.build_icon();
         this.url = null; // 表示するリンクの URL を保持
         this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
+        this.isMouseOverIcon = false; // アイコン上にマウスオーバーしているかを追跡
 
         // マウスの動きを追跡
         document.addEventListener("mousemove", (e) => {
@@ -181,6 +182,12 @@ class PreviewIcon {
     }
 
     show(url) {
+        // アイコン上にマウスオーバーしている場合は新しいアイコンを表示しない
+        if (this.isMouseOverIcon) {
+            debugLog("アイコン上にマウスオーバーしているため、新しいアイコンを表示しません");
+            return;
+        }
+
         // 新しい URL をマウスオーバーした場合、既存のアイコンを非表示タイマーで消す
         if (this.url !== url) {
             this.hide_timer.start(); // 一定時間後に消す
@@ -219,8 +226,13 @@ class PreviewIcon {
         icon.setAttribute("id", "link_preview_icon");
         icon.style.visibility = 'hidden';
         document.body.appendChild(icon);
+
+        // アイコン上にマウスオーバーしたときの処理
         icon.addEventListener("mouseover", this._on_mouseover.bind(this));
+
+        // アイコンからマウスアウトしたときの処理
         icon.addEventListener("mouseout", this._on_mouseout.bind(this));
+
         return icon;
     }
 
@@ -231,11 +243,13 @@ class PreviewIcon {
     }
 
     _on_mouseover(e) {
+        this.isMouseOverIcon = true; // フラグを true に設定
         this.hide_timer.stop();
         preview_frame.show(this.url);
     }
 
     _on_mouseout(e) {
+        this.isMouseOverIcon = false; // フラグを false に設定
         this.hide_timer.start();
         preview_frame.hide();
     }
