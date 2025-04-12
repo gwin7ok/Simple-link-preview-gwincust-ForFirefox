@@ -33,16 +33,30 @@ const SETTINGS = {
 
 // ローカルストレージから設定値をロード
 function loadSettings() {
+    debugLog("ローカルストレージから設定をロードします。");
     return browser.storage.local.get(
         Object.fromEntries(
             Object.keys(SETTINGS).map(key => [`${STORAGE_PREFIX}${key}`, SETTINGS[key].default])
         )
     ).then((storedSettings) => {
+        debugLog("ローカルストレージから取得した設定:", storedSettings);
         for (const [key, config] of Object.entries(SETTINGS)) {
             const prefixedKey = `${STORAGE_PREFIX}${key}`;
-            config.value = storedSettings[prefixedKey] ?? config.default; // デフォルト値を適用
+            let value = storedSettings[prefixedKey];
+
+            // 型変換を適用
+            if (typeof config.default === "boolean") {
+                value = value === "true" || value === true;
+            } else if (typeof config.default === "number") {
+                value = Number(value);
+            }
+
+            config.value = value ?? config.default; // デフォルト値を適用
+            debugLog(`設定された値: ${key} = ${config.value}`);
         }
         debugLog("設定がロードされました:", SETTINGS);
+    }).catch((error) => {
+        console.error("ローカルストレージからの設定読み込み中にエラーが発生しました:", error);
     });
 }
 

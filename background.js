@@ -14,15 +14,21 @@ if (typeof SETTINGS === 'undefined') {
     console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
-loadSettings().then(() => {
-    debugLog("設定がロードされました:", SETTINGS);
-})
+// 非同期関数を作成して設定をロード
+async function initializeSettings() {
+    await loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+    });
 
-// プレビュー機能の状態を初期化
-browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
-    const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
-    updateIcon(previewEnabled); // 初期状態のアイコンを設定
-});
+    // プレビュー機能の状態を初期化
+    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
+        const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
+        updateIcon(previewEnabled); // 初期状態のアイコンを設定
+    });
+}
+
+// 初期化関数を呼び出す
+initializeSettings();
 
 // Firefox 起動時にアイコンを正しい状態に設定
 browser.runtime.onStartup.addListener(() => {

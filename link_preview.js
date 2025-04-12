@@ -17,193 +17,7 @@ if (typeof SETTINGS === 'undefined') {
 
 debugLog("link_preview.js is loaded");
 
-// preview_frame と preview_icon のインスタンスを初期化
-let preview_frame;
-let preview_icon;
-
-document.addEventListener('DOMContentLoaded', () => {
-    // preview_frame と preview_icon を初期化
-    preview_frame = new PreviewFrame();
-    preview_icon = new PreviewIcon();
-    // 他の初期化処理
-    loadSettings().then(() => {
-        debugLog("設定がロードされました:", SETTINGS);
-        initializePreviewSettings(); // 独自の初期化処理を実行
-    });
-
-    // 設定が変更されたときに再読み込み
-    browser.storage.onChanged.addListener((changes, area) => {
-        if (area === "local") {
-            loadSettings().then(() => {
-                initializePreviewSettings(); // 再度初期化処理を実行
-            });
-
-            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
-                if (preview_frame.display) {
-                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
-                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
-                }
-            }
-        }
-    });
-});
-
-// 独自の初期化処理をまとめた関数
-function initializePreviewSettings() {
-    // タイマーのタイムアウト値を更新
-    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
-    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
-    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
-    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
-    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
-
-    // プレビューウィンドウの幅を再設定
-    if (preview_frame.frame) {
-        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
-    }
-
-    // プレビューウィンドウが表示されている場合、右マージン幅を更新
-    if (preview_frame.display) {
-        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
-    }
-
-    debugLog("プレビュー設定が反映されました:", SETTINGS);
-}
-
-if (SETTINGS.previewEnabled.value === undefined) {
-    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
-    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
-}
-
-class Timer {
-    constructor(func, timeout) {
-        this.func = func;       // タイマーが終了したときに実行する関数
-        this.timeout = timeout; // タイムアウト時間（ミリ秒）
-        this.timer = null;      // 現在のタイマーIDを保持
-        this.running = false;   // タイマーが動作中かどうかを示すフラグ
-    }
-
-    start(arg = null) {
-        // 既存のタイマーが動作中の場合はキャンセル
-        if (this.running) {
-            clearTimeout(this.timer);
-        }
-
-        // 新しいタイマーを開始
-        this.timer = setTimeout(() => this._exec(arg), this.timeout);
-        this.running = true; // タイマーが動作中であることを記録
-    }
-
-    _exec(arg) {
-        this.func(arg);      // 指定された関数を引数付きで実行
-        this.running = false; // タイマーが終了したことを記録
-        this.timer = null;    // タイマーIDをリセット
-    }
-
-    stop() {
-        // 動作中のタイマーを停止
-        if (this.running) {
-            clearTimeout(this.timer);
-            this.running = false; // タイマーが停止したことを記録
-            this.timer = null;    // タイマーIDをリセット
-        }
-    }
-
-    updateTimeout(newTimeout) {
-        this.timeout = newTimeout; // タイムアウト時間を更新
-    }
-}
-
-class PreviewIcon {
-    constructor() {
-        this.show_timer = new Timer(this._show.bind(this), SETTINGS.iconDisplayDelay.value);
-        this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.iconDisplayTime.value);
-        this.icon = this.build_icon();
-        this.url = null; // 表示するリンクの URL を保持
-        this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
-        this.isMouseOverIcon = false; // アイコン上にマウスオーバーしているかを追跡
-
-        // マウスの動きを追跡
-        document.addEventListener("mousemove", (e) => {
-            this.mousePosition = { x: e.clientX, y: e.clientY };
-        });
-    }
-
-    show(url) {
-        // アイコン上にマウスオーバーしている場合は新しいアイコンを表示しない
-        if (this.isMouseOverIcon) {
-            debugLog("アイコン上にマウスオーバーしているため、新しいアイコンを表示しません");
-            return;
-        }
-
-        // 新しい URL をマウスオーバーした場合、既存のアイコンを非表示タイマーで消す
-        if (this.url !== url) {
-            this.hide_timer.start(); // 一定時間後に消す
-        }
-
-        this.url = url;
-        this.show_timer.stop();
-        this.show_timer.start();
-    }
-
-    hide() {
-        this.icon.style.visibility = 'hidden';
-        this.hide_timer.stop();
-    }
-
-    _show() {
-        // 遅延後に保存された最新のマウスポインタ位置を使用
-        const posX = this.mousePosition.x;
-        const posY = this.mousePosition.y;
-
-        // アイコンを表示する位置を計算
-        const pos = this._getIconPosition(posX, posY);
-        this.icon.style.left = pos.x + "px";
-        this.icon.style.top = pos.y + "px";
-        this.icon.style.visibility = 'visible';
-        this.hide_timer.start(); // 表示後に非表示タイマーを開始
-    }
-
-    _hide() {
-        this.icon.style.visibility = 'hidden';
-    }
-
-    build_icon() {
-        let icon = document.createElement("img");
-        icon.setAttribute("src", browser.extension.getURL("images/mouseover.png"));
-        icon.setAttribute("id", "link_preview_icon");
-        icon.style.visibility = 'hidden';
-        document.body.appendChild(icon);
-
-        // アイコン上にマウスオーバーしたときの処理
-        icon.addEventListener("mouseover", this._on_mouseover.bind(this));
-
-        // アイコンからマウスアウトしたときの処理
-        icon.addEventListener("mouseout", this._on_mouseout.bind(this));
-
-        return icon;
-    }
-
-    _getIconPosition(cursorX, cursorY) {
-        const posX = cursorX + SETTINGS.iconDisplayOffsetX.value;
-        const posY = cursorY + SETTINGS.iconDisplayOffsetY.value;
-        return { x: posX, y: posY };
-    }
-
-    _on_mouseover(e) {
-        this.isMouseOverIcon = true; // フラグを true に設定
-        this.hide_timer.stop();
-        preview_frame.show(this.url);
-    }
-
-    _on_mouseout(e) {
-        this.isMouseOverIcon = false; // フラグを false に設定
-        this.hide_timer.start();
-        preview_frame.hide();
-    }
-}
-
+// PreviewFrame クラスの定義を先頭に移動
 class PreviewFrame {
     constructor() {
         this._display = false;
@@ -403,6 +217,192 @@ class PreviewFrame {
     }
 }
 
+// 非同期関数を作成
+async function initialize() {
+    await loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+        initializePreviewSettings(); // 独自の初期化処理を実行
+    });
+
+    // preview_frame と preview_icon のインスタンスを初期化
+    let preview_frame = new PreviewFrame();
+    let preview_icon = new PreviewIcon();
+
+    // 設定が変更されたときに再読み込み
+    browser.storage.onChanged.addListener(async (changes, area) => {
+        if (area === "local") {
+            await loadSettings().then(() => {
+                initializePreviewSettings(); // 再度初期化処理を実行
+            });
+
+            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
+            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
+                if (preview_frame.display) {
+                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
+                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+                }
+            }
+        }
+    });
+}
+
+// 初期化関数を呼び出す
+initialize();
+
+// 独自の初期化処理をまとめた関数
+function initializePreviewSettings() {
+    // タイマーのタイムアウト値を更新
+    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
+
+    // プレビューウィンドウの幅を再設定
+    if (preview_frame.frame) {
+        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+    }
+
+    // プレビューウィンドウが表示されている場合、右マージン幅を更新
+    if (preview_frame.display) {
+        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
+
+    debugLog("プレビュー設定が反映されました:", SETTINGS);
+}
+
+if (SETTINGS.previewEnabled.value === undefined) {
+    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
+    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
+}
+
+class Timer {
+    constructor(func, timeout) {
+        this.func = func;       // タイマーが終了したときに実行する関数
+        this.timeout = timeout; // タイムアウト時間（ミリ秒）
+        this.timer = null;      // 現在のタイマーIDを保持
+        this.running = false;   // タイマーが動作中かどうかを示すフラグ
+    }
+
+    start(arg = null) {
+        // 既存のタイマーが動作中の場合はキャンセル
+        if (this.running) {
+            clearTimeout(this.timer);
+        }
+
+        // 新しいタイマーを開始
+        this.timer = setTimeout(() => this._exec(arg), this.timeout);
+        this.running = true; // タイマーが動作中であることを記録
+    }
+
+    _exec(arg) {
+        this.func(arg);      // 指定された関数を引数付きで実行
+        this.running = false; // タイマーが終了したことを記録
+        this.timer = null;    // タイマーIDをリセット
+    }
+
+    stop() {
+        // 動作中のタイマーを停止
+        if (this.running) {
+            clearTimeout(this.timer);
+            this.running = false; // タイマーが停止したことを記録
+            this.timer = null;    // タイマーIDをリセット
+        }
+    }
+
+    updateTimeout(newTimeout) {
+        this.timeout = newTimeout; // タイムアウト時間を更新
+    }
+}
+
+class PreviewIcon {
+    constructor() {
+        this.show_timer = new Timer(this._show.bind(this), SETTINGS.iconDisplayDelay.value);
+        this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.iconDisplayTime.value);
+        this.icon = this.build_icon();
+        this.url = null; // 表示するリンクの URL を保持
+        this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
+        this.isMouseOverIcon = false; // アイコン上にマウスオーバーしているかを追跡
+
+        // マウスの動きを追跡
+        document.addEventListener("mousemove", (e) => {
+            this.mousePosition = { x: e.clientX, y: e.clientY };
+        });
+    }
+
+    show(url) {
+        // アイコン上にマウスオーバーしている場合は新しいアイコンを表示しない
+        if (this.isMouseOverIcon) {
+            debugLog("アイコン上にマウスオーバーしているため、新しいアイコンを表示しません");
+            return;
+        }
+
+        // 新しい URL をマウスオーバーした場合、既存のアイコンを非表示タイマーで消す
+        if (this.url !== url) {
+            this.hide_timer.start(); // 一定時間後に消す
+        }
+
+        this.url = url;
+        this.show_timer.stop();
+        this.show_timer.start();
+    }
+
+    hide() {
+        this.icon.style.visibility = 'hidden';
+        this.hide_timer.stop();
+    }
+
+    _show() {
+        // 遅延後に保存された最新のマウスポインタ位置を使用
+        const posX = this.mousePosition.x;
+        const posY = this.mousePosition.y;
+
+        // アイコンを表示する位置を計算
+        const pos = this._getIconPosition(posX, posY);
+        this.icon.style.left = pos.x + "px";
+        this.icon.style.top = pos.y + "px";
+        this.icon.style.visibility = 'visible';
+        this.hide_timer.start(); // 表示後に非表示タイマーを開始
+    }
+
+    _hide() {
+        this.icon.style.visibility = 'hidden';
+    }
+
+    build_icon() {
+        let icon = document.createElement("img");
+        icon.setAttribute("src", browser.extension.getURL("images/mouseover.png"));
+        icon.setAttribute("id", "link_preview_icon");
+        icon.style.visibility = 'hidden';
+        document.body.appendChild(icon);
+
+        // アイコン上にマウスオーバーしたときの処理
+        icon.addEventListener("mouseover", this._on_mouseover.bind(this));
+
+        // アイコンからマウスアウトしたときの処理
+        icon.addEventListener("mouseout", this._on_mouseout.bind(this));
+
+        return icon;
+    }
+
+    _getIconPosition(cursorX, cursorY) {
+        const posX = cursorX + SETTINGS.iconDisplayOffsetX.value;
+        const posY = cursorY + SETTINGS.iconDisplayOffsetY.value;
+        return { x: posX, y: posY };
+    }
+
+    _on_mouseover(e) {
+        this.isMouseOverIcon = true; // フラグを true に設定
+        this.hide_timer.stop();
+        preview_frame.show(this.url);
+    }
+
+    _on_mouseout(e) {
+        this.isMouseOverIcon = false; // フラグを false に設定
+        this.hide_timer.start();
+        preview_frame.hide();
+    }
+}
 
 let links = document.querySelectorAll('a');
 document.addEventListener('mouseover', on_link_mouseover_doc);
