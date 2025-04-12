@@ -13,14 +13,6 @@ Copyright (c) 2025 gwin7ok
 // https://gist.github.com/dergachev/e216b25d9a144914eae2
 // https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/webRequest/onHeadersReceived
 
-function debugLog(message, data = null) {
-    browser.storage.local.get("SLPGC_debugMode").then((settings) => {
-        if (settings.SLPGC_debugMode) {
-            console.log(message, data);
-        }
-    });
-}
-
 debugLog("ignore-frame-options.js is loaded");
 
 let xFrameOptionsListener = null;
@@ -28,8 +20,11 @@ let contentSecurityPolicyListener = null;
 
 // リスナーを登録する関数
 function enableListeners() {
-    browser.storage.local.get(["SLPGC_ignoreXFrameOptions", "SLPGC_ignoreContentSecurityPolicy"]).then((settings) => {
-        if (settings.SLPGC_ignoreXFrameOptions && !xFrameOptionsListener) {
+    browser.storage.local.get([
+        `${STORAGE_PREFIX}ignoreXFrameOptions`,
+        `${STORAGE_PREFIX}ignoreContentSecurityPolicy`
+    ]).then((settings) => {
+        if (settings[`${STORAGE_PREFIX}ignoreXFrameOptions`] && !xFrameOptionsListener) {
             debugLog("Enabling X-Frame-Options listener");
             xFrameOptionsListener = (details) => {
                 debugLog("Intercepted headers (X-Frame-Options):", details.responseHeaders);
@@ -46,7 +41,7 @@ function enableListeners() {
             );
         }
 
-        if (settings.SLPGC_ignoreContentSecurityPolicy && !contentSecurityPolicyListener) {
+        if (settings[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`] && !contentSecurityPolicyListener) {
             debugLog("Enabling Content-Security-Policy listener");
             contentSecurityPolicyListener = (details) => {
                 debugLog("Intercepted headers (CSP):", details.responseHeaders);
@@ -82,8 +77,11 @@ function disableListeners() {
 
 // プレビュー機能の状態を監視
 function updateListenersBasedOnSettings() {
-    browser.storage.local.get(["SLPGC_ignoreXFrameOptions", "SLPGC_ignoreContentSecurityPolicy"]).then((settings) => {
-        if (settings.SLPGC_ignoreXFrameOptions || settings.SLPGC_ignoreContentSecurityPolicy) {
+    browser.storage.local.get([
+        `${STORAGE_PREFIX}ignoreXFrameOptions`,
+        `${STORAGE_PREFIX}ignoreContentSecurityPolicy`
+    ]).then((settings) => {
+        if (settings[`${STORAGE_PREFIX}ignoreXFrameOptions`] || settings[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`]) {
             enableListeners();
         } else {
             disableListeners();
@@ -96,7 +94,7 @@ updateListenersBasedOnSettings();
 
 // 設定が変更されたときにリスナーを更新
 browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && (changes.SLPGC_ignoreXFrameOptions || changes.SLPGC_ignoreContentSecurityPolicy)) {
+    if (area === "local" && (changes[`${STORAGE_PREFIX}ignoreXFrameOptions`] || changes[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`])) {
         updateListenersBasedOnSettings();
     }
 });

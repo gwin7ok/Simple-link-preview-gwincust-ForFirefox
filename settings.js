@@ -9,19 +9,55 @@ Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
 
-const DEFAULT_SETTINGS = {
-    iconDisplayDelay: 200,
-    iconDisplayTime: 2000,
-    iconDisplayOffsetX: -30,
-    iconDisplayOffsetY: -30,
-    frameDisplayDelay: 500,
-    frameDisplayTime: 2000,
-    frameUpdateTime: 200,
-    bodyRightMarginWidthPx: 800,
-    previewWidthPx: 800,
-    ignoreXFrameOptions: false,
-    ignoreContentSecurityPolicy: false,
-    debugMode: false,
-    urlFilterList: "", // 改行区切りの文字列リスト
-    keepPreviewFrameOpen: false // プレビューを常に固定する
+// ローカルストレージに保存されるキーのプレフィックス
+const STORAGE_PREFIX = "SLPGC_";
+
+const SETTINGS = {
+    iconDisplayDelay: { default: 200, elementId: "icon-display-delay", value: null },
+    iconDisplayTime: { default: 2000, elementId: "icon-display-time", value: null },
+    iconDisplayOffsetX: { default: -30, elementId: "icon-display-offset-x", value: null },
+    iconDisplayOffsetY: { default: -30, elementId: "icon-display-offset-y", value: null },
+    frameDisplayDelay: { default: 500, elementId: "frame-display-delay", value: null },
+    frameDisplayTime: { default: 2000, elementId: "frame-display-time", value: null },
+    frameUpdateTime: { default: 200, elementId: "frame-update-time", value: null },
+    bodyRightMarginWidthPx: { default: 800, elementId: "body-right-margin-width-px", value: null },
+    previewWidthPx: { default: 800, elementId: "preview-width-px", value: null },
+    ignoreXFrameOptions: { default: false, elementId: "ignore-x-frame-options", value: null },
+    ignoreContentSecurityPolicy: { default: false, elementId: "ignore-content-security-policy", value: null },
+    debugMode: { default: false, elementId: "debug-mode", value: null },
+    urlFilterList: { default: "", elementId: "url-filter-list", value: null }, // 改行区切りの文字列リスト
+    keepPreviewFrameOpen: { default: false, elementId: "keep-preview-frame-open", value: null }, // プレビューを常に固定する
+    previewEnabled: { default: true, elementId: "", value: null } // プレビュー機能の有効/無効
 };
+
+
+// ローカルストレージから設定値をロード
+function loadSettings() {
+    return browser.storage.local.get(
+        Object.fromEntries(
+            Object.keys(SETTINGS).map(key => [`${STORAGE_PREFIX}${key}`, SETTINGS[key].default])
+        )
+    ).then((storedSettings) => {
+        for (const [key, config] of Object.entries(SETTINGS)) {
+            const prefixedKey = `${STORAGE_PREFIX}${key}`;
+            config.value = storedSettings[prefixedKey] ?? config.default; // デフォルト値を適用
+        }
+        debugLog("設定がロードされました:", SETTINGS);
+    });
+}
+
+// 設定値を更新する
+function updateSetting(key, value) {
+    if (SETTINGS[key]) {
+        SETTINGS[key].value = value;
+        const prefixedKey = `${STORAGE_PREFIX}${key}`;
+        return browser.storage.local.set({ [prefixedKey]: value });
+    }
+    return Promise.reject(`Invalid setting key: ${key}`);
+}
+
+function debugLog(message, data = null) {
+    if (SETTINGS.debugMode.value) {
+        console.log(message, data);
+    }
+}

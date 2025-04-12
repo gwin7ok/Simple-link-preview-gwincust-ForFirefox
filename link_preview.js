@@ -9,123 +9,72 @@ Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
 
-// `import` 文を削除し、グローバルスコープの `DEFAULT_SETTINGS` を利用
-
-let ICON_DISPLAY_DELAY;
-let ICON_DISPLAY_TIME;
-let ICON_DISPLAY_OFFSET_X; // 変更: OFFSET_X -> ICON_DISPLAY_OFFSET_X
-let ICON_DISPLAY_OFFSET_Y; // 変更: OFFSET_Y -> ICON_DISPLAY_OFFSET_Y
-let FRAME_DISPLAY_DELAY;
-let FRAME_DISPLAY_TIME;
-let FRAME_UPDATE_TIME;
-let BODY_RIGHT_MARGIN_WIDTH_PX; // 変更: RIGHT_MARGIN_WIDTH -> BODY_RIGHT_MARGIN_WIDTH_PX
-let PREVIEW_WIDTH_PX; // 変更: WIDTH_PX -> PREVIEW_WIDTH_PX
-let IGNORE_X_FRAME_OPTIONS; // 追加
-let IGNORE_CONTENT_SECURITY_POLICY; // 追加
-let DEBUG_MODE; // 追加
-
-function debugLog(message, data = null) {
-    browser.storage.local.get("SLPGC_debugMode").then((settings) => { // 修正: debugMode -> SLPGC_debugMode
-        if (settings.SLPGC_debugMode) {
-            console.log(message, data);
-        }
-    });
+if (typeof SETTINGS === 'undefined') {
+    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+} else {
+    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
 debugLog("link_preview.js is loaded");
 
-function updateSettings() {
-    browser.storage.local.get(
-        Object.fromEntries(
-            Object.keys(DEFAULT_SETTINGS).map(key => [`SLPGC_${key}`, DEFAULT_SETTINGS[key]])
-        )
-    ).then((settings) => {
-        ICON_DISPLAY_DELAY = settings.SLPGC_iconDisplayDelay || DEFAULT_SETTINGS.iconDisplayDelay;
-        ICON_DISPLAY_TIME = settings.SLPGC_iconDisplayTime || DEFAULT_SETTINGS.iconDisplayTime;
-        ICON_DISPLAY_OFFSET_X = settings.SLPGC_iconDisplayOffsetX || DEFAULT_SETTINGS.iconDisplayOffsetX;
-        ICON_DISPLAY_OFFSET_Y = settings.SLPGC_iconDisplayOffsetY || DEFAULT_SETTINGS.iconDisplayOffsetY;
-        FRAME_DISPLAY_DELAY = settings.SLPGC_frameDisplayDelay || DEFAULT_SETTINGS.frameDisplayDelay;
-        FRAME_DISPLAY_TIME = settings.SLPGC_frameDisplayTime || DEFAULT_SETTINGS.frameDisplayTime;
-        FRAME_UPDATE_TIME = settings.SLPGC_frameUpdateTime || DEFAULT_SETTINGS.frameUpdateTime;
-        BODY_RIGHT_MARGIN_WIDTH_PX = settings.SLPGC_bodyRightMarginWidthPx || DEFAULT_SETTINGS.bodyRightMarginWidthPx;
-        PREVIEW_WIDTH_PX = settings.SLPGC_previewWidthPx || DEFAULT_SETTINGS.previewWidthPx;
-        IGNORE_X_FRAME_OPTIONS = settings.SLPGC_ignoreXFrameOptions || DEFAULT_SETTINGS.ignoreXFrameOptions;
-        IGNORE_CONTENT_SECURITY_POLICY = settings.SLPGC_ignoreContentSecurityPolicy || DEFAULT_SETTINGS.ignoreContentSecurityPolicy;
-        DEBUG_MODE = settings.SLPGC_debugMode || DEFAULT_SETTINGS.debugMode;
+// preview_frame と preview_icon のインスタンスを初期化
+let preview_frame;
+let preview_icon;
 
-        // タイマーのタイムアウト値を更新
-        preview_icon.show_timer.updateTimeout(ICON_DISPLAY_DELAY);
-        preview_icon.hide_timer.updateTimeout(ICON_DISPLAY_TIME);
-        preview_frame.show_timer.updateTimeout(FRAME_DISPLAY_DELAY);
-        preview_frame.hide_timer.updateTimeout(FRAME_DISPLAY_TIME);
-        preview_frame.update_timer.updateTimeout(FRAME_UPDATE_TIME);
-
-        // プレビューウィンドウの幅を再設定
-        if (preview_frame.frame) {
-            preview_frame.frame.style.width = `${PREVIEW_WIDTH_PX}px`;
-        }
-
-        // プレビューウィンドウが表示されている場合、右マージン幅を更新
-        if (preview_frame.display) {
-            document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
-        }
-
-        debugLog("設定が更新されました:", {
-            ICON_DISPLAY_DELAY,
-            ICON_DISPLAY_TIME,
-            ICON_DISPLAY_OFFSET_X,
-            ICON_DISPLAY_OFFSET_Y,
-            FRAME_DISPLAY_DELAY,
-            FRAME_DISPLAY_TIME,
-            FRAME_UPDATE_TIME,
-            BODY_RIGHT_MARGIN_WIDTH_PX,
-            PREVIEW_WIDTH_PX,
-            IGNORE_X_FRAME_OPTIONS,
-            IGNORE_CONTENT_SECURITY_POLICY,
-            DEBUG_MODE
-        });
+document.addEventListener('DOMContentLoaded', () => {
+    // preview_frame と preview_icon を初期化
+    preview_frame = new PreviewFrame();
+    preview_icon = new PreviewIcon();
+    // 他の初期化処理
+    loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+        initializePreviewSettings(); // 独自の初期化処理を実行
     });
-}
 
-// 初期設定を読み込む
-updateSettings();
+    // 設定が変更されたときに再読み込み
+    browser.storage.onChanged.addListener((changes, area) => {
+        if (area === "local") {
+            loadSettings().then(() => {
+                initializePreviewSettings(); // 再度初期化処理を実行
+            });
 
-// 初回起動時にデフォルト設定を保存
-browser.storage.local.get(
-    Object.fromEntries(
-        Object.keys(DEFAULT_SETTINGS).map(key => [`SLPGC_${key}`, DEFAULT_SETTINGS[key]])
-    )
-).then((settings) => {
-    if (Object.keys(settings).length === 0) {
-        browser.storage.local.set(
-            Object.fromEntries(
-                Object.entries(DEFAULT_SETTINGS).map(([key, value]) => [`SLPGC_${key}`, value])
-            )
-        );
-    }
-});
-
-// 設定が変更されたときに再読み込み
-browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local") {
-        // 設定の更新
-        updateSettings();
-
-        // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-        if (changes.SLPGC_previewEnabled && changes.SLPGC_previewEnabled.newValue === false) {
-            if (preview_frame.display) {
-                preview_frame._hide(); // タイマーを使わずに即座に非表示にする
-                debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
+            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
+                if (preview_frame.display) {
+                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
+                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+                }
             }
         }
-    }
+    });
 });
 
-browser.storage.local.get({ SLPGC_previewEnabled: true }).then((data) => { // 修正: previewEnabled -> SLPGC_previewEnabled
-    if (data.SLPGC_previewEnabled === undefined) {
-        browser.storage.local.set({ SLPGC_previewEnabled: true }); // 修正: previewEnabled -> SLPGC_previewEnabled
+// 独自の初期化処理をまとめた関数
+function initializePreviewSettings() {
+    // タイマーのタイムアウト値を更新
+    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
+
+    // プレビューウィンドウの幅を再設定
+    if (preview_frame.frame) {
+        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
     }
-});
+
+    // プレビューウィンドウが表示されている場合、右マージン幅を更新
+    if (preview_frame.display) {
+        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
+
+    debugLog("プレビュー設定が反映されました:", SETTINGS);
+}
+
+if (SETTINGS.previewEnabled.value === undefined) {
+    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
+    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
+}
 
 class Timer {
     constructor(func, timeout) {
@@ -168,8 +117,8 @@ class Timer {
 
 class PreviewIcon {
     constructor() {
-        this.show_timer = new Timer(this._show.bind(this), ICON_DISPLAY_DELAY);
-        this.hide_timer = new Timer(this._hide.bind(this), ICON_DISPLAY_TIME);
+        this.show_timer = new Timer(this._show.bind(this), SETTINGS.iconDisplayDelay.value);
+        this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.iconDisplayTime.value);
         this.icon = this.build_icon();
         this.url = null; // 表示するリンクの URL を保持
         this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
@@ -237,8 +186,8 @@ class PreviewIcon {
     }
 
     _getIconPosition(cursorX, cursorY) {
-        const posX = cursorX + ICON_DISPLAY_OFFSET_X;
-        const posY = cursorY + ICON_DISPLAY_OFFSET_Y;
+        const posX = cursorX + SETTINGS.iconDisplayOffsetX.value;
+        const posY = cursorY + SETTINGS.iconDisplayOffsetY.value;
         return { x: posX, y: posY };
     }
 
@@ -258,20 +207,18 @@ class PreviewIcon {
 class PreviewFrame {
     constructor() {
         this._display = false;
-        this.locked = false;
+
+        // SETTINGS を使用してロック状態を設定
+        this.locked = SETTINGS.keepPreviewFrameOpen.value || false;
+        this._updatePinButtonState(); // ピンボタンの状態を更新
+
         this.pendingUrl = null; // 更新間隔中のURL
         this.currentHoveredUrl = null; // 現在マウスオーバーしているURL
-        this.show_timer = new Timer(this._show.bind(this), FRAME_DISPLAY_DELAY);
-        this.hide_timer = new Timer(this._hide.bind(this), FRAME_DISPLAY_TIME);
-        this.update_timer = new Timer((url) => this._update(url), FRAME_UPDATE_TIME);
+        this.show_timer = new Timer(this._show.bind(this), SETTINGS.frameDisplayDelay.value);
+        this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.frameDisplayTime.value);
+        this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
-
-        // ローカルストレージからロック状態を読み込む
-        browser.storage.local.get("SLPGC_keepPreviewFrameOpen").then((settings) => {
-            this.locked = settings.SLPGC_keepPreviewFrameOpen || false;
-            this._updatePinButtonState(); // ピンボタンの状態を更新
-        });
     }
 
     _updatePinButtonState() {
@@ -297,7 +244,7 @@ class PreviewFrame {
         this._display = true;
 
         // プレビューを表示する直前にBodyの右マージン幅を設定
-        document.body.style.marginRight = `${BODY_RIGHT_MARGIN_WIDTH_PX}px`;
+        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
 
         debugLog("プレビューを表示します:", this.url);
         this.iframe.src = this.url;
@@ -305,24 +252,19 @@ class PreviewFrame {
     }
 
     hide() {
-        // プレビュー機能がOFFの場合、またはロックされていない場合に非表示にする
-        browser.storage.local.get("SLPGC_previewEnabled").then((settings) => {
-            if (!settings.SLPGC_previewEnabled) {
-                debugLog("プレビュー機能がOFFのため、非表示にします");
-                this.hide_timer.start();
-                this.show_timer.stop();
-                this.update_timer.stop();
-            } else if (!this.locked) {
-                debugLog("プレビューがロックされていないため、非表示にします");
-                this.hide_timer.start();
-                this.show_timer.stop();
-                this.update_timer.stop();
-            } else {
-                debugLog("プレビューがロックされているため、非表示にしません");
-            }
-        }).catch((error) => {
-            debugLog("設定の取得中にエラーが発生しました:", error);
-        });
+        if (!SETTINGS.previewEnabled.value) {
+            debugLog("プレビュー機能がOFFのため、非表示にします");
+            this.hide_timer.start();
+            this.show_timer.stop();
+            this.update_timer.stop();
+        } else if (!this.locked) {
+            debugLog("プレビューがロックされていないため、非表示にします");
+            this.hide_timer.start();
+            this.show_timer.stop();
+            this.update_timer.stop();
+        } else {
+            debugLog("プレビューがロックされているため、非表示にしません");
+        }
     }
 
     _hide() {
@@ -427,17 +369,27 @@ class PreviewFrame {
     }
     _on_push_pin_click(e) {
         let btn = e.target;
-        this.locked = !this.locked;
+        this.locked = !this.locked; // ロック状態を切り替え
         debugLog("プレビューの固定状態を切り替えました:", this.locked);
-        this.locked ? btn.setAttribute('locked', 'yes') : btn.removeAttribute('locked');
+
+        // ボタンの状態を更新
+        if (this.locked) {
+            btn.setAttribute('locked', 'yes');
+        } else {
+            btn.removeAttribute('locked');
+        }
+
+        // SETTINGS にロック状態を反映
+        SETTINGS.keepPreviewFrameOpen.value = this.locked;
 
         // ローカルストレージにロック状態を保存
-        browser.storage.local.set({ SLPGC_keepPreviewFrameOpen: this.locked }).then(() => {
+        browser.storage.local.set({ [`${STORAGE_PREFIX}keepPreviewFrameOpen`]: this.locked }).then(() => {
             // 他のタブに通知を送信
             browser.runtime.sendMessage({ action: "updateKeepPreviewFrameOpen" });
         });
 
-        this._updatePinButtonState(); // ピンボタンの状態を更新
+        // ピンボタンの状態を更新
+        this._updatePinButtonState();
     }
     _on_hide_click(e) {
         debugLog("非表示ボタンがクリックされました");
@@ -451,44 +403,44 @@ class PreviewFrame {
     }
 }
 
-let preview_icon = new PreviewIcon();
-let preview_frame = new PreviewFrame();
 
 let links = document.querySelectorAll('a');
 document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);
 
 function on_link_mouseover_doc(e) {
-    browser.storage.local.get(["SLPGC_previewEnabled", "SLPGC_urlFilterList"]).then((data) => {
-        if (!data.SLPGC_previewEnabled) return;
+    if (!SETTINGS.previewEnabled.value) return;
 
-        // マウスオーバーした要素の親要素が<a>タグか確認
-        const linkElement = e.target.closest('a');
-        if (linkElement && linkElement.href) {
-            const url = linkElement.href;
+    const linkElement = e.target.closest('a');
+    if (linkElement && linkElement.href) {
+        const url = linkElement.href;
 
-            // フィルタリストを確認
-            const filterList = (data.SLPGC_urlFilterList || "").split("\n").map(s => s.trim()).filter(s => s);
-            if (filterList.some(filter => url.includes(filter))) {
-                debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
-                return;
-            }
+        const filterList = (SETTINGS.urlFilterList.value || "").split("\n").map(s => s.trim()).filter(s => s);
+        if (filterList.some(filter => url.includes(filter))) {
+            debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
+            return;
+        }
 
-            preview_frame.currentHoveredUrl = url; // 現在マウスオーバーしているURLを設定
+        preview_frame.currentHoveredUrl = url;
 
-            if (preview_frame.display) {
-                preview_frame.update(url);
-            } else {
-                preview_icon.show(url, e.clientX, e.clientY);
-            }
-        }else {
+        if (preview_frame.display) {
+            preview_frame.update(url);
+        } else {
+            preview_icon.show(url, e.clientX, e.clientY);
+        }
+    } else {
         debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", e.target.nodeName);
-        preview_frame.currentHoveredUrl = null; // マウスオーバーした要素が<a>タグではない場合、URLをリセット
-        }   
-    })  ;
+        preview_frame.currentHoveredUrl = null;
+    }
 }
 
-function on_link_mouseout_doc(e) {
+// on_link_mouseout_doc 関数の修正
+function on_link_mouseout_doc(event) {
+    if (!preview_frame) {
+        debugLog("preview_frame が未定義のため、on_link_mouseout_doc をスキップします");
+        return;
+    }
+
     if (e.target.nodeName == 'A') {
         preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
         if (preview_frame.display) {
@@ -499,12 +451,24 @@ function on_link_mouseout_doc(e) {
 
 // メッセージリスナーを追加
 browser.runtime.onMessage.addListener((message) => {
-    if (message.action === "updateKeepPreviewFrameOpen") {
-        // ローカルストレージからロック状態を再読み込み
-        browser.storage.local.get("SLPGC_keepPreviewFrameOpen").then((settings) => {
-            preview_frame.locked = settings.SLPGC_keepPreviewFrameOpen || false;
-            preview_frame._updatePinButtonState(); // ピンボタンの状態を更新
+    switch (message.action) {
+        case "updateKeepPreviewFrameOpen":
+            preview_frame.locked = SETTINGS.keepPreviewFrameOpen.value || false;
+            preview_frame._updatePinButtonState();
             debugLog("ピンの状態を更新しました:", preview_frame.locked);
-        });
+            break;
+
+        case "updatePreviewEnabled":
+            SETTINGS.previewEnabled.value = message.enabled;
+            debugLog("プレビュー機能の状態が更新されました:", message.enabled);
+
+            // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
+            if (!message.enabled && preview_frame.display) {
+                preview_frame._hide();
+            }
+            break;
+
+        default:
+            debugLog("未対応のメッセージアクション:", message.action);
     }
 });

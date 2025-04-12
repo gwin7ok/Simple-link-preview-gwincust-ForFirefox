@@ -8,38 +8,57 @@ Copyright (c) 2024 Lecron
 Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
+if (typeof SETTINGS === 'undefined') {
+    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+} else {
+    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+}
+
+loadSettings().then(() => {
+    debugLog("設定がロードされました:", SETTINGS);
+})
 
 // プレビュー機能の状態を初期化
-browser.storage.local.get({ SLPGC_previewEnabled: true }).then((data) => {
-    browser.storage.local.set({ SLPGC_previewEnabled: data.SLPGC_previewEnabled });
-    updateIcon(data.SLPGC_previewEnabled); // 初期状態のアイコンを設定
+browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
+    const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
+    updateIcon(previewEnabled); // 初期状態のアイコンを設定
 });
 
 // Firefox 起動時にアイコンを正しい状態に設定
 browser.runtime.onStartup.addListener(() => {
-    browser.storage.local.get("SLPGC_previewEnabled").then((data) => {
-        updateIcon(data.SLPGC_previewEnabled); // 起動時にアイコンを更新
+    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
+        const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
+        updateIcon(previewEnabled); // 起動時にアイコンを更新
     });
 });
 
-// アイコンをクリックしたときの処理
+// ツールバーのアドオンアイコンがクリックされたときの処理
 browser.browserAction.onClicked.addListener(() => {
-    browser.storage.local.get("SLPGC_previewEnabled").then((data) => {
-        const newState = !data.SLPGC_previewEnabled; // 状態を切り替え
-        browser.storage.local.set({ SLPGC_previewEnabled: newState });
+    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
+        const currentState = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
+        const newState = !currentState;
 
-        // アイコンの状態を更新
-        updateIcon(newState);
+        // ローカルストレージに保存
+        browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: newState }).then(() => {
+            debugLog("プレビュー機能の状態を切り替えました:", newState);
 
-        // デバッグ用ログ
-        console.log(`プレビュー機能の状態を切り替えました: ${newState}`);
+            // アイコンの状態を更新
+            updateIcon(newState);
+
+            // 他のタブに通知を送信
+            browser.runtime.sendMessage({ action: "updatePreviewEnabled", enabled: newState });
+        });
     });
 });
 
 // アイコンの状態を更新する関数
-function updateIcon(enabled) {
-    const iconPath = enabled ? "images/icon-enabled.png" : "images/icon-disabled.png";
+function updateIcon(isEnabled) {
+    const iconPath = isEnabled ? "icons/enabled.png" : "icons/disabled.png";
     browser.browserAction.setIcon({ path: iconPath });
+
+    // ツールチップを2行に設定
+    const title = `プレビュー機能のON/OFF切替\n${isEnabled ? "プレビュー機能: 有効" : "プレビュー機能: 無効"}`;
+    browser.browserAction.setTitle({ title });
 }
 
 // コンテキストメニューを作成
@@ -59,7 +78,7 @@ browser.menus.onClicked.addListener((info) => {
 // メッセージ受信時の処理
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "updateKeepPreviewFrameOpen") {
-        console.log("Received message to update keepPreviewFrameOpen");
+        debugLog("Received message to update keepPreviewFrameOpen");
 
         // すべてのタブにメッセージを送信
         browser.tabs.query({}).then((tabs) => {

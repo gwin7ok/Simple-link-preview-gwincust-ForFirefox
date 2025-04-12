@@ -19,7 +19,11 @@
     }
   ],
   "background": {
-    "scripts": ["background.js", "ignore-frame-options.js"],
+    "scripts": [
+      "settings.js",
+      "background.js",
+      "ignore-frame-options.js"
+    ],
     "persistent": false
   },
   "web_accessible_resources": ["images/*.png", "images/*.svg"],
