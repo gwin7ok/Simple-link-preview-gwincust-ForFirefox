@@ -20,13 +20,7 @@ async function initializeSettings() {
         debugLog("設定がロードされました:", SETTINGS);
     });
 
-    // プレビュー機能の状態を初期化
-    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
-        const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
-        updateIcon(previewEnabled); // 初期状態のアイコンを設定
-    });
 }
-
 // 初期化関数を呼び出す
 initializeSettings();
 
@@ -37,6 +31,7 @@ browser.runtime.onStartup.addListener(() => {
         updateIcon(previewEnabled); // 起動時にアイコンを更新
     });
 });
+
 
 // ツールバーのアドオンアイコンがクリックされたときの処理
 browser.browserAction.onClicked.addListener(() => {
