@@ -82,32 +82,31 @@ browser.menus.onClicked.addListener((info) => {
 });
 
 // メッセージ受信時の処理
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.action === "updateKeepPreviewFrameOpen") {
         debugLog("Received message to update keepPreviewFrameOpen");
 
-        // すべてのタブにメッセージを送信
-        browser.tabs.query({}).then((tabs) => {
-            tabs.forEach((tab) => {
+        try {
+            // すべてのタブを取得
+            const tabs = await browser.tabs.query({});
+            for (const tab of tabs) {
                 // 特殊なタブを除外
                 if (tab.url && !tab.url.startsWith("about:") && !tab.url.startsWith("chrome://") && !tab.url.startsWith("moz-extension://")) {
-                    browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" }).catch((error) => {
-                        // `content_scripts` がロードされていない場合にスクリプトを挿入
+                    try {
+                        await browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" });
+                    } catch (error) {
                         if (error.message.includes("Could not establish connection")) {
-                            browser.tabs.executeScript(tab.id, { file: "link_preview.js" }).then(() => {
-                                // スクリプト挿入後に再送信
-                                browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" }).catch((error) => {
-                                    console.warn(`Failed to send message to tab ${tab.id} after injecting script:`, error.message);
-                                });
-                            }).catch((error) => {
-                                console.error(`Failed to inject script into tab ${tab.id}:`, error.message);
-                            });
+                            // スクリプトを動的に挿入
+                            await browser.tabs.executeScript(tab.id, { file: "link_preview.js" });
+                            await browser.tabs.sendMessage(tab.id, { action: "updateKeepPreviewFrameOpen" });
                         } else {
                             console.warn(`Failed to send message to tab ${tab.id}:`, error.message);
                         }
-                    });
+                    }
                 }
-            });
-        });
+            }
+        } catch (error) {
+            console.error("Error while updating keepPreviewFrameOpen:", error);
+        }
     }
 });

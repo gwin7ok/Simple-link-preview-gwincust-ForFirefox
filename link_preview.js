@@ -66,12 +66,16 @@ function on_link_mouseout_doc(event) {
 browser.runtime.onMessage.addListener((message) => {
     switch (message.action) {
         case "updateKeepPreviewFrameOpen":
+            debugLog("updateKeepPreviewFrameOpen メッセージを受信しました:", message.locked);
+            loadSettings(); // 設定をロード
             preview_frame.locked = SETTINGS.keepPreviewFrameOpen.value || false;
             preview_frame._updatePinButtonState();
             debugLog("ピンの状態を更新しました:", preview_frame.locked);
             break;
 
         case "updatePreviewEnabled":
+            debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
+            loadSettings(); // 設定をロード
             SETTINGS.previewEnabled.value = message.enabled;
             debugLog("プレビュー機能の状態が更新されました:", message.enabled);
 
@@ -107,6 +111,7 @@ class PreviewFrame {
     }
 
     _updatePinButtonState() {
+        this.locked = SETTINGS.keepPreviewFrameOpen.value
         const pinButton = this.frame.querySelector('#push-pin');
         if (this.locked) {
             pinButton.setAttribute('locked', 'yes');
@@ -271,6 +276,7 @@ class PreviewFrame {
         browser.storage.local.set({ [`${STORAGE_PREFIX}keepPreviewFrameOpen`]: this.locked }).then(() => {
             // 他のタブに通知を送信
             browser.runtime.sendMessage({ action: "updateKeepPreviewFrameOpen" });
+            debugLog("ロックピンがクリックされたことを他のタブに通知しました(updateKeepPreviewFrameOpen):", this.locked);
         });
 
         // ピンボタンの状態を更新
