@@ -36,15 +36,14 @@ async function togglePreviewEnabled() {
     const newState = !currentState;
 
     // ローカルストレージに保存
-    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: newState }).then(() => {
-        debugLog("プレビュー機能の状態を切り替えました:", newState);
+    await browser.storage.local.set({ "previewEnabled": newState });
+    debugLog("プレビュー機能の状態を切り替えました:", newState);
 
-        // アイコンの状態を更新
-        updateIcon(newState);
+    // アイコンの状態を更新
+    updateIcon(newState);
 
-        // 他のタブに通知を送信
-        sendMessageToActiveTabs({ action: "updatePreviewEnabled", enabled: newState });
-    });
+    // 他のタブに通知を送信
+    sendMessageToActiveTabs({ action: "updatePreviewEnabled", enabled: newState });
 }
 
 // ツールバーのアドオンアイコンがクリックされたときの処理
@@ -82,7 +81,6 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
         debugLog("設定値変更を受信しました:", message.changes);
 
         await initializeSettings(); // 設定を再初期化
-        
     }
 });
 
@@ -92,8 +90,8 @@ function sendMessageToActiveTabs(message) {
         for (const tab of tabs) {
             // 各タブにメッセージを送信
             browser.tabs.sendMessage(tab.id, message).catch((error) => {
-                // エラーをキャッチして無視（リスナーが存在しない場合など）
-                debugLog(`タブ ${tab.id} にメッセージを送信中にエラーが発生しました（リスナーが存在しない可能性があります）:` );
+                // エラー内容をログに出力
+                debugLog(`タブ ${tab.id} にメッセージを送信中にエラーが発生しました:`, error);
             });
         }
     });

@@ -9,9 +9,7 @@ Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
 
-// ローカルストレージに保存されるキーのプレフィックス
-const STORAGE_PREFIX = "SLPGC_";
-
+// SETTINGS 定義
 const SETTINGS = {
     iconDisplayDelay: { default: 200, elementId: "icon-display-delay", value: null },
     iconDisplayTime: { default: 2000, elementId: "icon-display-time", value: null },
@@ -40,19 +38,17 @@ const SETTINGS = {
     }
 };
 
-
 // ローカルストレージから設定値をロード
 function loadSettings() {
     debugLog("ローカルストレージから設定をロードします。");
     return browser.storage.local.get(
         Object.fromEntries(
-            Object.keys(SETTINGS).map(key => [`${STORAGE_PREFIX}${key}`, SETTINGS[key].default])
+            Object.keys(SETTINGS).map(key => [key, SETTINGS[key].default])
         )
     ).then((storedSettings) => {
         debugLog("ローカルストレージから取得した設定:", storedSettings);
         for (const [key, config] of Object.entries(SETTINGS)) {
-            const prefixedKey = `${STORAGE_PREFIX}${key}`;
-            let value = storedSettings[prefixedKey];
+            let value = storedSettings[key];
 
             // 型変換を適用
             if (typeof config.default === "boolean") {
@@ -82,14 +78,13 @@ function loadSettings() {
 function updateSetting(key, value) {
     if (SETTINGS[key]) {
         SETTINGS[key].value = value;
-        const prefixedKey = `${STORAGE_PREFIX}${key}`;
-        return browser.storage.local.set({ [prefixedKey]: value });
+        return browser.storage.local.set({ [key]: value });
     }
     return Promise.reject(`Invalid setting key: ${key}`);
 }
 
 function debugLog(message, data = null) {
-    if (SETTINGS.debugMode.value) {
+    if (SETTINGS.debugMode?.value ?? false) {
         console.log(message, data);
     }
 }

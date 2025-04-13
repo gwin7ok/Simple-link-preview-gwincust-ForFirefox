@@ -319,7 +319,7 @@ class PreviewFrame {
         SETTINGS.keepPreviewFrameOpen.value = this.locked;
 
         // ローカルストレージにロック状態を保存
-        browser.storage.local.set({ [`${STORAGE_PREFIX}keepPreviewFrameOpen`]: this.locked }).then(() => {
+        browser.storage.local.set({ "keepPreviewFrameOpen": this.locked }).then(() => {
             debugLog("ローカルストレージにロック状態を保存しました:", this.locked);
         });
 
@@ -498,7 +498,7 @@ async function initialize() {
             });
 
             // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-            if (changes[`${STORAGE_PREFIX}previewEnabled`] && changes[`${STORAGE_PREFIX}previewEnabled`].newValue === false) {
+            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
                 if (preview_frame.display) {
                     preview_frame._hide(); // タイマーを使わずに即座に非表示にする
                     debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
@@ -516,7 +516,7 @@ async function initialize() {
                 action: "settingsChanged",
                 changes: changedSettings
             }).catch((error) => {
-                console.warn("メッセージ送信中にエラーが発生しました:", error);
+                debugLog("メッセージ送信中にエラーが発生しました:", error);
             });
         }
     });
@@ -560,7 +560,7 @@ async function updatePreviewSettings() {
 
 if (SETTINGS.previewEnabled.value === undefined) {
     SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
-    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: SETTINGS.previewEnabled.default });
+    browser.storage.local.set({ "previewEnabled": SETTINGS.previewEnabled.default });
 }
 
 // イベントリスナーを追加
