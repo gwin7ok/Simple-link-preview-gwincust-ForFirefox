@@ -44,12 +44,12 @@ Copyright (c) 2025 gwin7ok
         <br>
         <label>
             アイコンのマウスポインタ基準オフセット (X軸, px):
-            <input type="number" id="icon-display-offset-x" min="-100" step="1">
+            <input type="number" id="icon-display-offset-x" min="-100" step="10">
         </label>
         <br>
         <label>
             アイコンのマウスポインタ基準オフセット (Y軸, px):
-            <input type="number" id="icon-display-offset-y" min="-100" step="1">
+            <input type="number" id="icon-display-offset-y" min="-100" step="10">
         </label>
         <br>
         <label>
@@ -79,16 +79,22 @@ Copyright (c) 2025 gwin7ok
         <br>
         <label>
             コンテンツの右マージン幅 (px):
-            <input type="number" id="body-right-margin-width-px" min="0" step="10"> <!-- 修正 -->
+            <input type="number" id="body-right-margin-width-px" min="0" step="100"> <!-- 修正 -->
         </label>
         <br>
         <label>
             プレビューウィンドウの幅 (px):
-            <input type="number" id="preview-width-px" min="100" step="10"> <!-- 修正 -->
+            <input type="number" id="preview-width-px" min="100" step="100"> <!-- 修正 -->
         </label>
         <br>
+        <label for="customMarginSelectors">
+            特定のサイトで右マージンを設定する要素（ドメイン,CSSセレクター）*改行区切り:
+        </label>
+        <textarea id="customMarginSelectors" rows="5" placeholder="例: example.com, .main-content"></textarea>
+        <br>
+        <br>
         <label style="display: inline-grid;">
-            この文字列が含まれているリンクは読み込まない(改行区切り)
+            この文字列が含まれているリンクは読み込まない *改行区切り
             <textarea id="url-filter-list" rows="5" cols="30" style="margin: 0; padding: 0;"></textarea>
         </label>
         <br>
@@ -100,12 +106,12 @@ Copyright (c) 2025 gwin7ok
         <br>
         <label>
             <input type="checkbox" id="ignore-x-frame-options">
-            X-Frame-Options を無視
+            X-Frame-Options を無視 *表示できるリンク先が増えますがセキュリティ上のリスクがあります
         </label>
         <br>
         <label>
             <input type="checkbox" id="ignore-content-security-policy">
-            Content-Security-Policy を無視
+            Content-Security-Policy を無視 *表示できるリンク先が増えますがセキュリティ上のリスクがあります
         </label>
         <br>
         <button type="button" id="save-settings">設定を保存</button>

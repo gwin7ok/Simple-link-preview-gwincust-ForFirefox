@@ -34,6 +34,13 @@ async function initializeSettings() {
                 if (element.type === "checkbox") {
                     element.checked = config.value ?? config.default; // デフォルト値を適用
                     debugLog(`設定中: ${key} (checkbox) = ${element.checked} (value: ${config.value}, default: ${config.default})`);
+                } else if (element.tagName === "TEXTAREA") {
+                    // 配列を改行区切りの文字列に変換
+                    element.value = (config.value || []).join("\n");
+                } else if (element.tagName === "SELECT") {
+                    // セレクトリストの値を設定
+                    element.value = config.value ?? config.default;
+                    debugLog(`設定中: ${key} (select) = ${element.value} (value: ${config.value}, default: ${config.default})`);
                 } else {
                     element.value = config.value ?? config.default; // デフォルト値を適用
                     debugLog(`設定中: ${key} (input) = ${element.value} (value: ${config.value}, default: ${config.default})`);
@@ -63,6 +70,8 @@ if (document.location.pathname.endsWith('options.html')) {
                 // フォーム要素の値を取得
                 if (element.type === "checkbox") {
                     newValue = element.checked; // チェックボックスの場合
+                } else if (element.tagName === "TEXTAREA") {
+                    newValue = element.value.split("\n").map(line => line.trim()).filter(line => line); // 改行区切りでリスト化
                 } else if (element.tagName === "SELECT") {
                     newValue = element.value; // セレクトボックスの場合
                 } else {

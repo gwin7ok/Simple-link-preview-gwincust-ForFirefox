@@ -17,7 +17,7 @@ const SETTINGS = {
     iconDisplayTime: { default: 2000, elementId: "icon-display-time", value: null },
     iconDisplayOffsetX: { default: -30, elementId: "icon-display-offset-x", value: null },
     iconDisplayOffsetY: { default: -30, elementId: "icon-display-offset-y", value: null },
-    iconSize: { default: "small",elementId: "iconSize", value: "small"  }, // アイコンサイズの設定
+    iconSize: { default: "small", elementId: "iconSize", value: "small" }, // アイコンサイズの設定
     frameDisplayDelay: { default: 500, elementId: "frame-display-delay", value: null },
     frameDisplayTime: { default: 2000, elementId: "frame-display-time", value: null },
     frameUpdateTime: { default: 200, elementId: "frame-update-time", value: null },
@@ -26,9 +26,18 @@ const SETTINGS = {
     ignoreXFrameOptions: { default: false, elementId: "ignore-x-frame-options", value: null },
     ignoreContentSecurityPolicy: { default: false, elementId: "ignore-content-security-policy", value: null },
     debugMode: { default: false, elementId: "debug-mode", value: null },
-    urlFilterList: { default: "", elementId: "url-filter-list", value: null }, // 改行区切りの文字列リスト
+    urlFilterList: { 
+        default: [".zip", ".pdf"], // 配列形式でデフォルト値を設定
+        elementId: "url-filter-list", 
+        value: null 
+    },
     keepPreviewFrameOpen: { default: false, elementId: "keep-preview-frame-open", value: null }, // プレビューを常に固定する
-    previewEnabled: { default: true, elementId: "", value: null } // プレビュー機能の有効/無効
+    previewEnabled: { default: true, elementId: "", value: null }, // プレビュー機能の有効/無効
+    customMarginSelectors: {
+        elementId: "customMarginSelectors",
+        value: null,
+        default: ["youtube.com,#content", "x.com,#react-root"] // 配列形式でデフォルト値を設定
+    }
 };
 
 
@@ -50,6 +59,14 @@ function loadSettings() {
                 value = value === "true" || value === true;
             } else if (typeof config.default === "number") {
                 value = Number(value);
+            } else if (Array.isArray(config.default)) {
+                // 配列型の場合、空文字列ならデフォルト値を適用
+                if (typeof value === "string" && value.trim() === "") {
+                    value = config.default;
+                } else if (typeof value === "string") {
+                    // 改行区切りの文字列を配列に変換
+                    value = value.split("\n").map(item => item.trim()).filter(item => item);
+                }
             }
 
             config.value = value ?? config.default; // デフォルト値を適用

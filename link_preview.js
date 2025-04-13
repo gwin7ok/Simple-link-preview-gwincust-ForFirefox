@@ -22,30 +22,10 @@ let preview_frame;
 let preview_icon;
 
 // 関数定義部分を上部に移動
-function on_link_mouseover_doc(e) {
+function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
 
-    const linkElement = e.target.closest('a');
-    if (linkElement && linkElement.href) {
-        const url = linkElement.href;
-
-        const filterList = (SETTINGS.urlFilterList.value || "").split("\n").map(s => s.trim()).filter(s => s);
-        if (filterList.some(filter => url.includes(filter))) {
-            debugLog("URLがフィルタリストに一致したため、プレビューを表示しません:", url);
-            return;
-        }
-
-        preview_frame.currentHoveredUrl = url;
-
-        if (preview_frame.display) {
-            preview_frame.update(url);
-        } else {
-            preview_icon.show(url, e.clientX, e.clientY);
-        }
-    } else {
-        debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", e.target.nodeName);
-        preview_frame.currentHoveredUrl = null;
-    }
+    preview_frame._onLinkMouseOver(event);
 }
 
 function on_link_mouseout_doc(event) {
@@ -100,6 +80,47 @@ class PreviewFrame {
         this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
     }
 
+    _shouldIgnoreUrl(url) {
+        // URL フィルタリストを取得
+        const filterList = SETTINGS.urlFilterList.value || []; // 配列形式で保持されている
+
+        // フィルタリストに一致する文字列が含まれている場合は true を返す
+        for (const filter of filterList) {
+            if (url.includes(filter)) {
+                debugLog(`URL がフィルタリストに一致しました: ${filter}`);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    _onLinkMouseOver(event) {
+        const linkElement = event.target.closest('a');
+        if (!linkElement || !linkElement.href) {
+            debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", event.target.nodeName);
+            this.currentHoveredUrl = null;
+            return;
+        }
+
+        const url = linkElement.href;
+
+        // URL がフィルタリストに一致する場合は処理をスキップ
+        if (this._shouldIgnoreUrl(url)) {
+            debugLog("この URL はフィルタリストに一致するため、プレビューを表示しません:", url);
+            return;
+        }
+
+        this.currentHoveredUrl = url;
+
+        // プレビューを表示する処理
+        if (this.display) {
+            this.update(url);
+        } else {
+            preview_icon.show(url, event.clientX, event.clientY);
+        }
+    }
+
     _updatePinButtonState() {
         const pinButton = this.frame.querySelector('#push-pin');
         if (this.locked) {
@@ -114,6 +135,27 @@ class PreviewFrame {
         return this._display;
     }
 
+    _applyRightMargin() {
+        const currentDomain = window.location.hostname;
+        let targetElement = document.body; // デフォルトは body
+
+        // カスタムマージン設定を確認
+        for (const entry of SETTINGS.customMarginSelectors.value) {
+            const [domain, selector] = entry.split(",").map(s => s.trim());
+            if (currentDomain.includes(domain)) {
+                const customElement = document.querySelector(selector);
+                if (customElement) {
+                    targetElement = customElement;
+                    debugLog(`カスタムマージン設定が適用されました: ${domain}, ${selector}`);
+                    break;
+                }
+            }
+        }
+
+        // 右マージンを適用
+        targetElement.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
+
     show(url) {
         this.url = url;
         this.show_timer.start();
@@ -121,10 +163,8 @@ class PreviewFrame {
     }
 
     _show() {
+        this._applyRightMargin(); // プレビュー表示時に右マージンを適用
         this._display = true;
-
-        // プレビューを表示する直前にBodyの右マージン幅を設定
-        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
 
         debugLog("プレビューを表示します:", this.url);
         this.iframe.src = this.url;
@@ -155,8 +195,22 @@ class PreviewFrame {
         this.iframe.src = "about:blank";
         this.frame.style.visibility = 'hidden';
 
-        // プレビューを非表示にした際にBodyの右マージン幅をリセット
-        document.body.style.marginRight = '0';
+        // プレビューを非表示にした際に右マージンをリセット
+        const currentDomain = window.location.hostname;
+        let targetElement = document.body;
+
+        for (const entry of SETTINGS.customMarginSelectors.value) {
+            const [domain, selector] = entry.split(",").map(s => s.trim());
+            if (currentDomain.includes(domain)) {
+                const customElement = document.querySelector(selector);
+                if (customElement) {
+                    targetElement = customElement;
+                    break;
+                }
+            }
+        }
+
+        targetElement.style.marginRight = '0';
     }
 
     update(url) {

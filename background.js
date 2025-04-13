@@ -88,5 +88,11 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
         // アイコンの状態を更新
         updateIcon(newState);
+
+        // 応答を返す
+        sendResponse({ success: true });
     }
+
+    // true を返して非同期応答を許可
+    return true;
 });
