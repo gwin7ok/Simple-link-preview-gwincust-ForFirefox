@@ -65,14 +65,6 @@ function on_link_mouseout_doc(event) {
 // メッセージリスナーを追加
 browser.runtime.onMessage.addListener((message) => {
     switch (message.action) {
-        case "updateKeepPreviewFrameOpen":
-            debugLog("updateKeepPreviewFrameOpen メッセージを受信しました:", message.locked);
-            loadSettings(); // 設定をロード
-            preview_frame.locked = SETTINGS.keepPreviewFrameOpen.value || false;
-            preview_frame._updatePinButtonState();
-            debugLog("ピンの状態を更新しました:", preview_frame.locked);
-            break;
-
         case "updatePreviewEnabled":
             debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
             loadSettings(); // 設定をロード
@@ -94,8 +86,6 @@ browser.runtime.onMessage.addListener((message) => {
 class PreviewFrame {
     constructor() {
         this._display = false;
-
-        // フレームを先に初期化
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
 
@@ -111,13 +101,13 @@ class PreviewFrame {
     }
 
     _updatePinButtonState() {
-        this.locked = SETTINGS.keepPreviewFrameOpen.value
         const pinButton = this.frame.querySelector('#push-pin');
         if (this.locked) {
             pinButton.setAttribute('locked', 'yes');
         } else {
             pinButton.removeAttribute('locked');
         }
+        debugLog("ピンボタンの状態を更新しました:", this.locked);
     }
 
     get display() {
@@ -142,9 +132,11 @@ class PreviewFrame {
     }
 
     hide() {
+        debugLog("hide() called. Current locked state:", this.locked);
+
         if (!SETTINGS.previewEnabled.value) {
             debugLog("プレビュー機能がOFFのため、非表示にします");
-            this.hide_timer.start();
+            this._hide(); // プレビュー機能がOFFになっている場合はタイマーを使わずに即座に非表示にする
             this.show_timer.stop();
             this.update_timer.stop();
         } else if (!this.locked) {
@@ -269,14 +261,12 @@ class PreviewFrame {
             btn.removeAttribute('locked');
         }
 
-        // SETTINGS にロック状態を反映
+        // SETTINGS にロック状態を反映（ただし、他のタブには影響を与えない）
         SETTINGS.keepPreviewFrameOpen.value = this.locked;
 
         // ローカルストレージにロック状態を保存
         browser.storage.local.set({ [`${STORAGE_PREFIX}keepPreviewFrameOpen`]: this.locked }).then(() => {
-            // 他のタブに通知を送信
-            browser.runtime.sendMessage({ action: "updateKeepPreviewFrameOpen" });
-            debugLog("ロックピンがクリックされたことを他のタブに通知しました(updateKeepPreviewFrameOpen):", this.locked);
+            debugLog("ローカルストレージにロック状態を保存しました:", this.locked);
         });
 
         // ピンボタンの状態を更新
@@ -427,6 +417,7 @@ async function initialize() {
     await loadSettings().then(() => {
         debugLog("設定がロードされました:", SETTINGS);
         initializePreviewSettings(); // 独自の初期化処理を実行
+        updatePreviewSettings(); // プレビュー設定を更新
     });
 
  
@@ -434,7 +425,7 @@ async function initialize() {
     browser.storage.onChanged.addListener(async (changes, area) => {
         if (area === "local") {
             await loadSettings().then(() => {
-                initializePreviewSettings(); // 再度初期化処理を実行
+                updatePreviewSettings(); // SETTINGS変数が変更された際の処理を実行
             });
 
             // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
@@ -451,30 +442,34 @@ async function initialize() {
 // 初期化関数を呼び出す
 initialize();
 
-// 独自の初期化処理をまとめた関数
+// ページロード時の初期化処理をまとめた関数
 async function initializePreviewSettings() {
     // preview_frame と preview_icon のインスタンスを初期化
     preview_frame = new PreviewFrame();
     preview_icon = new PreviewIcon();
 
-    // タイマーのタイムアウト値を更新
-    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
-    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
-    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
-    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
-    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
+ }
 
-    // プレビューウィンドウの幅を再設定
-    if (preview_frame.frame) {
-        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
-    }
+// SETTINGS変数が更新されたときの更新処理をまとめた関数(ページロード時も実行)
+async function updatePreviewSettings() {
+   // タイマーのタイムアウト値を更新
+   preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+   preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+   preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+   preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+   preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
 
-    // プレビューウィンドウが表示されている場合、右マージン幅を更新
-    if (preview_frame.display) {
-        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
-    }
+   // プレビューウィンドウの幅を再設定
+   if (preview_frame.frame) {
+       preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+   }
 
-    debugLog("プレビュー設定が反映されました:", SETTINGS);
+   // プレビューウィンドウが表示されている場合、右マージン幅を更新
+   if (preview_frame.display) {
+       document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+   }
+
+   debugLog("プレビュー設定が反映されました:", SETTINGS);
 }
 
 if (SETTINGS.previewEnabled.value === undefined) {

@@ -80,5 +80,5 @@ if (document.location.pathname.endsWith('options.html')) {
         }
     });
 } else {
-    console.log("options.html 以外のページではスクリプトを実行しません。");
+    debugLog("options.html 以外のページではスクリプトを実行しません。");
 }
