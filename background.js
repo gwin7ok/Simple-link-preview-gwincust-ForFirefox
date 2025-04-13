@@ -32,9 +32,8 @@ browser.runtime.onStartup.addListener(() => {
     });
 });
 
-
-// ツールバーのアドオンアイコンがクリックされたときの処理
-browser.browserAction.onClicked.addListener(() => {
+// プレビュー機能の状態を切り替える関数
+function togglePreviewEnabled() {
     browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
         const currentState = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
         const newState = !currentState;
@@ -47,9 +46,14 @@ browser.browserAction.onClicked.addListener(() => {
             updateIcon(newState);
 
             // 他のタブに通知を送信
-            browser.runtime.sendMessage({ action: "updatePreviewEnabled", enabled: newState });
+            sendMessageToActiveTabs({ action: "updatePreviewEnabled", enabled: newState });
         });
     });
+}
+
+// ツールバーのアドオンアイコンがクリックされたときの処理
+browser.browserAction.onClicked.addListener(() => {
+    togglePreviewEnabled();
 });
 
 // アイコンの状態を更新する関数
@@ -78,21 +82,23 @@ browser.menus.onClicked.addListener((info) => {
 
 // メッセージ受信時の処理
 browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-    if (message.action === "updatePreviewEnabled") {
-        debugLog("Received message to update previewEnabled");
-        const newState = message.enabled;
+    if (message.action === "settingsChanged") {
+        debugLog("設定値変更を受信しました:", message.changes);
 
-        // ローカルストレージに保存
-        await browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: newState });
-        debugLog("プレビュー機能の状態を切り替えました:", newState);
-
-        // アイコンの状態を更新
-        updateIcon(newState);
-
-        // 応答を返す
-        sendResponse({ success: true });
+        initializeSettings(); // 設定を再初期化
+        
     }
-
-    // true を返して非同期応答を許可
-    return true;
 });
+
+function sendMessageToActiveTabs(message) {
+    // すべてのタブを取得
+    browser.tabs.query({}).then((tabs) => {
+        for (const tab of tabs) {
+            // 各タブにメッセージを送信
+            browser.tabs.sendMessage(tab.id, message).catch((error) => {
+                // エラーをキャッチして無視（リスナーが存在しない場合など）
+                debugLog(`タブ ${tab.id} にメッセージを送信中にエラーが発生しました（リスナーが存在しない可能性があります）:` );
+            });
+        }
+    });
+}

@@ -504,6 +504,20 @@ async function initialize() {
                     debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
                 }
             }
+
+            // 変更された設定値を1つのオブジェクトにまとめる
+            const changedSettings = {};
+            for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
+                changedSettings[key] = { oldValue, newValue };
+            }
+
+            // まとめてメッセージを送信
+            browser.runtime.sendMessage({
+                action: "settingsChanged",
+                changes: changedSettings
+            }).catch((error) => {
+                console.warn("メッセージ送信中にエラーが発生しました:", error);
+            });
         }
     });
 }

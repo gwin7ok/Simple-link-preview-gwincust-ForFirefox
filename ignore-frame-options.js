@@ -13,89 +13,91 @@ Copyright (c) 2025 gwin7ok
 // https://gist.github.com/dergachev/e216b25d9a144914eae2
 // https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/webRequest/onHeadersReceived
 
+if (typeof SETTINGS === 'undefined') {
+    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+} else {
+    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+}
+
 debugLog("ignore-frame-options.js is loaded");
 
-let xFrameOptionsListener = null;
-let contentSecurityPolicyListener = null;
+// リスナーの状態を管理するマップ
+const listeners = {
+    xFrameOptions: null,
+    contentSecurityPolicy: null
+};
 
-// リスナーを登録する関数
-function enableListeners() {
-    browser.storage.local.get([
-        `${STORAGE_PREFIX}ignoreXFrameOptions`,
-        `${STORAGE_PREFIX}ignoreContentSecurityPolicy`
-    ]).then((settings) => {
-        if (settings[`${STORAGE_PREFIX}ignoreXFrameOptions`] && !xFrameOptionsListener) {
-            debugLog("Enabling X-Frame-Options listener");
-            xFrameOptionsListener = (details) => {
-                debugLog("Intercepted headers (X-Frame-Options):", details.responseHeaders);
-                const headers = details.responseHeaders.filter(
-                    (header) => header.name.toLowerCase() !== "x-frame-options"
-                );
-                debugLog("Modified headers (X-Frame-Options):", headers);
-                return { responseHeaders: headers };
-            };
-            browser.webRequest.onHeadersReceived.addListener(
-                xFrameOptionsListener,
-                { urls: ["<all_urls>"] },
-                ["blocking", "responseHeaders"]
+// リスナーを登録する汎用関数
+function addListener(name, condition, filterHeader, debugHeaderName) {
+    if (condition && !listeners[name]) {
+        debugLog(`Enabling ${debugHeaderName} listener`);
+        listeners[name] = (details) => {
+            debugLog(`Intercepted headers (${debugHeaderName}):`, details.responseHeaders);
+            const headers = details.responseHeaders.filter(
+                (header) => header.name.toLowerCase() !== filterHeader
             );
-        }
-
-        if (settings[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`] && !contentSecurityPolicyListener) {
-            debugLog("Enabling Content-Security-Policy listener");
-            contentSecurityPolicyListener = (details) => {
-                debugLog("Intercepted headers (CSP):", details.responseHeaders);
-                const headers = details.responseHeaders.filter(
-                    (header) => header.name.toLowerCase() !== "content-security-policy"
-                );
-                debugLog("Modified headers (CSP):", headers);
-                return { responseHeaders: headers };
-            };
-            browser.webRequest.onHeadersReceived.addListener(
-                contentSecurityPolicyListener,
-                { urls: ["<all_urls>"] },
-                ["blocking", "responseHeaders"]
-            );
-        }
-    });
-}
-
-// リスナーを解除する関数
-function disableListeners() {
-    if (xFrameOptionsListener) {
-        debugLog("Disabling X-Frame-Options listener");
-        browser.webRequest.onHeadersReceived.removeListener(xFrameOptionsListener);
-        xFrameOptionsListener = null;
-    }
-
-    if (contentSecurityPolicyListener) {
-        debugLog("Disabling Content-Security-Policy listener");
-        browser.webRequest.onHeadersReceived.removeListener(contentSecurityPolicyListener);
-        contentSecurityPolicyListener = null;
+            debugLog(`Modified headers (${debugHeaderName}):`, headers);
+            return { responseHeaders: headers };
+        };
+        browser.webRequest.onHeadersReceived.addListener(
+            listeners[name],
+            { urls: ["<all_urls>"] },
+            ["blocking", "responseHeaders"]
+        );
     }
 }
 
-// プレビュー機能の状態を監視
+// リスナーを解除する汎用関数
+function removeListener(name, debugHeaderName) {
+    if (listeners[name]) {
+        debugLog(`Disabling ${debugHeaderName} listener`);
+        browser.webRequest.onHeadersReceived.removeListener(listeners[name]);
+        listeners[name] = null;
+    }
+}
+
+// リスナーを更新する関数
 function updateListenersBasedOnSettings() {
-    browser.storage.local.get([
-        `${STORAGE_PREFIX}ignoreXFrameOptions`,
-        `${STORAGE_PREFIX}ignoreContentSecurityPolicy`
-    ]).then((settings) => {
-        if (settings[`${STORAGE_PREFIX}ignoreXFrameOptions`] || settings[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`]) {
-            enableListeners();
-        } else {
-            disableListeners();
-        }
+    // X-Frame-Options リスナーの管理
+    addListener(
+        "xFrameOptions",
+        SETTINGS.ignoreXFrameOptions.value,
+        "x-frame-options",
+        "X-Frame-Options"
+    );
+    if (!SETTINGS.ignoreXFrameOptions.value) {
+        removeListener("xFrameOptions", "X-Frame-Options");
+    }
+
+    // Content-Security-Policy リスナーの管理
+    addListener(
+        "contentSecurityPolicy",
+        SETTINGS.ignoreContentSecurityPolicy.value,
+        "content-security-policy",
+        "Content-Security-Policy"
+    );
+    if (!SETTINGS.ignoreContentSecurityPolicy.value) {
+        removeListener("contentSecurityPolicy", "Content-Security-Policy");
+    }
+}
+
+// 初期化関数
+async function initializeSettings() {
+    await loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+        updateListenersBasedOnSettings(); // 初期化時にリスナーを更新
     });
 }
 
-// 初期化時にリスナーを設定
-updateListenersBasedOnSettings();
+// 初期化関数を呼び出す
+initializeSettings();
 
-// 設定が変更されたときにリスナーを更新
-browser.storage.onChanged.addListener((changes, area) => {
-    if (area === "local" && (changes[`${STORAGE_PREFIX}ignoreXFrameOptions`] || changes[`${STORAGE_PREFIX}ignoreContentSecurityPolicy`])) {
-        updateListenersBasedOnSettings();
+// メッセージ受信時の処理
+browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    if (message.action === "settingsChanged") {
+        debugLog("設定値変更を受信しました:", message.changes);
+
+        // 設定を再初期化
+        await initializeSettings();
     }
 });
-
