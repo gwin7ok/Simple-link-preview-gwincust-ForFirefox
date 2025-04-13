@@ -17,6 +17,7 @@ const SETTINGS = {
     iconDisplayTime: { default: 2000, elementId: "icon-display-time", value: null },
     iconDisplayOffsetX: { default: -30, elementId: "icon-display-offset-x", value: null },
     iconDisplayOffsetY: { default: -30, elementId: "icon-display-offset-y", value: null },
+    iconSize: { default: "small",elementId: "iconSize", value: "small"  }, // アイコンサイズの設定
     frameDisplayDelay: { default: 500, elementId: "frame-display-delay", value: null },
     frameDisplayTime: { default: 2000, elementId: "frame-display-time", value: null },
     frameUpdateTime: { default: 200, elementId: "frame-update-time", value: null },

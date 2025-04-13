@@ -336,6 +336,21 @@ class PreviewIcon {
         document.addEventListener("mousemove", (e) => {
             this.mousePosition = { x: e.clientX, y: e.clientY };
         });
+
+        // 初期アイコンサイズを設定
+        this.updateIconSize();
+    }
+
+    updateIconSize() {
+        const sizeMap = {
+            small: "16px",
+            medium: "24px",
+            large: "32px"
+        };
+        const size = sizeMap[SETTINGS.iconSize.value] || sizeMap.small;
+        this.icon.style.width = size;
+        this.icon.style.height = size;
+        debugLog("アイコンの大きさを更新しました:", size);
     }
 
     show(url) {
@@ -448,28 +463,31 @@ async function initializePreviewSettings() {
     preview_frame = new PreviewFrame();
     preview_icon = new PreviewIcon();
 
- }
+}
 
 // SETTINGS変数が更新されたときの更新処理をまとめた関数(ページロード時も実行)
 async function updatePreviewSettings() {
-   // タイマーのタイムアウト値を更新
-   preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
-   preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
-   preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
-   preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
-   preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
+    // タイマーのタイムアウト値を更新
+    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
 
-   // プレビューウィンドウの幅を再設定
-   if (preview_frame.frame) {
-       preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
-   }
+    // プレビューウィンドウの幅を再設定
+    if (preview_frame.frame) {
+        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+    }
 
-   // プレビューウィンドウが表示されている場合、右マージン幅を更新
-   if (preview_frame.display) {
-       document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
-   }
+    // プレビューウィンドウが表示されている場合、右マージン幅を更新
+    if (preview_frame.display) {
+        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
 
-   debugLog("プレビュー設定が反映されました:", SETTINGS);
+    // アイコンの大きさを更新
+    preview_icon.updateIconSize();
+
+    debugLog("プレビュー設定が反映されました:", SETTINGS);
 }
 
 if (SETTINGS.previewEnabled.value === undefined) {
@@ -478,6 +496,5 @@ if (SETTINGS.previewEnabled.value === undefined) {
 }
 
 // イベントリスナーを追加
-let links = document.querySelectorAll('a');
 document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);

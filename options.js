@@ -63,6 +63,8 @@ if (document.location.pathname.endsWith('options.html')) {
                 // フォーム要素の値を取得
                 if (element.type === "checkbox") {
                     newValue = element.checked; // チェックボックスの場合
+                } else if (element.tagName === "SELECT") {
+                    newValue = element.value; // セレクトボックスの場合
                 } else {
                     newValue = element.value; // テキストや数値入力の場合
                 }
