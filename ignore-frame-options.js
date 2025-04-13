@@ -14,9 +14,9 @@ Copyright (c) 2025 gwin7ok
 // https://developer.mozilla.org/en-US/Add-ons/WebExtensions/API/webRequest/onHeadersReceived
 
 if (typeof SETTINGS === 'undefined') {
-    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+    console.error("[console()]SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {
-    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+    console.log("[console()]SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
 debugLog("ignore-frame-options.js is loaded");

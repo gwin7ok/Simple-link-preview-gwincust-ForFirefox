@@ -10,9 +10,9 @@ Copyright (c) 2025 gwin7ok
 */
 
 if (typeof SETTINGS === 'undefined') {
-    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+    console.error("[console()]SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {
-    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+    console.log("[console()]SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
 debugLog("link_preview.js is loaded");

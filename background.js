@@ -8,10 +8,11 @@ Copyright (c) 2024 Lecron
 Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
+
 if (typeof SETTINGS === 'undefined') {
-    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+    console.error("[console()]SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {
-    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+    console.log("[console()]SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
 // 非同期関数を作成して設定をロード
@@ -19,35 +20,30 @@ async function initializeSettings() {
     await loadSettings().then(() => {
         debugLog("設定がロードされました:", SETTINGS);
     });
-
 }
-// 初期化関数を呼び出す
-initializeSettings();
 
 // Firefox 起動時にアイコンを正しい状態に設定
-browser.runtime.onStartup.addListener(() => {
-    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
-        const previewEnabled = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
-        updateIcon(previewEnabled); // 起動時にアイコンを更新
-    });
+browser.runtime.onStartup.addListener(async () => {
+    await initializeSettings(); // SETTINGS を最新状態に更新
+    const previewEnabled = SETTINGS.previewEnabled.value ?? SETTINGS.previewEnabled.default;
+    updateIcon(previewEnabled); // 起動時にアイコンを更新
 });
 
 // プレビュー機能の状態を切り替える関数
-function togglePreviewEnabled() {
-    browser.storage.local.get(`${STORAGE_PREFIX}previewEnabled`).then((result) => {
-        const currentState = result[`${STORAGE_PREFIX}previewEnabled`] ?? SETTINGS.previewEnabled.default;
-        const newState = !currentState;
+async function togglePreviewEnabled() {
+    await initializeSettings(); // SETTINGS を最新状態に更新
+    const currentState = SETTINGS.previewEnabled.value ?? SETTINGS.previewEnabled.default;
+    const newState = !currentState;
 
-        // ローカルストレージに保存
-        browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: newState }).then(() => {
-            debugLog("プレビュー機能の状態を切り替えました:", newState);
+    // ローカルストレージに保存
+    browser.storage.local.set({ [`${STORAGE_PREFIX}previewEnabled`]: newState }).then(() => {
+        debugLog("プレビュー機能の状態を切り替えました:", newState);
 
-            // アイコンの状態を更新
-            updateIcon(newState);
+        // アイコンの状態を更新
+        updateIcon(newState);
 
-            // 他のタブに通知を送信
-            sendMessageToActiveTabs({ action: "updatePreviewEnabled", enabled: newState });
-        });
+        // 他のタブに通知を送信
+        sendMessageToActiveTabs({ action: "updatePreviewEnabled", enabled: newState });
     });
 }
 
@@ -85,7 +81,7 @@ browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     if (message.action === "settingsChanged") {
         debugLog("設定値変更を受信しました:", message.changes);
 
-        initializeSettings(); // 設定を再初期化
+        await initializeSettings(); // 設定を再初期化
         
     }
 });

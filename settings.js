@@ -74,7 +74,7 @@ function loadSettings() {
         }
         debugLog("設定がロードされました:", SETTINGS);
     }).catch((error) => {
-        console.error("ローカルストレージからの設定読み込み中にエラーが発生しました:", error);
+        console.error("[console()]ローカルストレージからの設定読み込み中にエラーが発生しました:", error);
     });
 }
 

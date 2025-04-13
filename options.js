@@ -10,9 +10,9 @@ Copyright (c) 2025 gwin7ok
 */
 
 if (typeof SETTINGS === 'undefined') {
-    console.error("SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
+    console.error("[console()]SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {
-    console.log("SETTINGS が正しく読み込まれました:", SETTINGS);
+    console.log("[console()]SETTINGS が正しく読み込まれました:", SETTINGS);
 }
 
 debugLog("スクリプトが実行されました。設定をロードします。");
@@ -53,7 +53,7 @@ async function initializeSettings() {
 }
 
 if (document.location.pathname.endsWith('options.html')) {
-    console.log("options.html が読み込まれました。スクリプトを実行します。");
+    console.log("[console()]options.html が読み込まれました。スクリプトを実行します。");
 
     // 初期化関数を呼び出す
     initializeSettings();
