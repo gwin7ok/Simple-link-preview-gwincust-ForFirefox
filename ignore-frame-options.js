@@ -58,6 +58,14 @@ function removeListener(name, debugHeaderName) {
 
 // リスナーを更新する関数
 function updateListenersBasedOnSettings() {
+    // プレビュー機能が無効の場合、すべてのリスナーを解除
+    if (!SETTINGS.previewEnabled.value) {
+        debugLog("プレビュー機能がOFFのため、すべてのリスナーを解除します");
+        removeListener("xFrameOptions", "X-Frame-Options");
+        removeListener("contentSecurityPolicy", "Content-Security-Policy");
+        return; // ここで終了
+    }
+
     // X-Frame-Options リスナーの管理
     addListener(
         "xFrameOptions",
