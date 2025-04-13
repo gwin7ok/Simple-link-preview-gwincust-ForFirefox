@@ -89,6 +89,52 @@ if (document.location.pathname.endsWith('options.html')) {
                 debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);
             }
         }
+
+        // 通知を表示
+        const notification = document.getElementById('notification');
+        notification.textContent = "設定を保存しました。";
+        notification.style.display = "block";
+
+        // 数秒後に通知を非表示にする
+        setTimeout(() => {
+            notification.style.display = "none";
+        }, 5000);
+    });
+
+    // 初期値に戻す
+    document.getElementById('reset-settings').addEventListener('click', () => {
+        for (const [key, config] of Object.entries(SETTINGS)) {
+            if (!config.elementId) continue;
+
+            const element = document.getElementById(config.elementId);
+            if (element) {
+                // 初期値をフォームに反映
+                if (element.type === "checkbox") {
+                    element.checked = config.default; // チェックボックスの場合
+                } else if (element.tagName === "TEXTAREA") {
+                    element.value = (config.default || []).join("\n"); // 配列を改行区切りの文字列に変換
+                } else if (element.tagName === "SELECT") {
+                    element.value = config.default; // セレクトボックスの場合
+                } else {
+                    element.value = config.default; // テキストや数値入力の場合
+                }
+
+                // デバッグログで初期値を確認
+                debugLog(`初期値にリセット: ${key} = ${config.default}`);
+            } else {
+                debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);
+            }
+        }
+
+        // 通知を表示
+        const notification = document.getElementById('notification');
+        notification.textContent = "初期値に戻しましたが、保存されていません。";
+        notification.style.display = "block";
+
+        // 数秒後に通知を非表示にする
+        setTimeout(() => {
+            notification.style.display = "none";
+        }, 5000);
     });
 } else {
     debugLog("options.html 以外のページではスクリプトを実行しません。");

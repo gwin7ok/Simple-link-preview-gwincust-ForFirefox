@@ -20,7 +20,7 @@ const SETTINGS = {
     iconSize: { default: "small", elementId: "iconSize", value: "small" }, // アイコンサイズの設定
     frameDisplayDelay: { default: 500, elementId: "frame-display-delay", value: null },
     frameDisplayTime: { default: 2000, elementId: "frame-display-time", value: null },
-    frameUpdateTime: { default: 200, elementId: "frame-update-time", value: null },
+    frameUpdateTime: { default: 500, elementId: "frame-update-time", value: null },
     bodyRightMarginWidthPx: { default: 800, elementId: "body-right-margin-width-px", value: null },
     previewWidthPx: { default: 800, elementId: "preview-width-px", value: null },
     ignoreXFrameOptions: { default: false, elementId: "ignore-x-frame-options", value: null },
