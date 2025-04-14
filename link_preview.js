@@ -438,28 +438,89 @@ class PreviewIcon {
         const pos = this._getIconPosition(posX, posY);
         this.icon.style.left = pos.x + "px";
         this.icon.style.top = pos.y + "px";
-        this.icon.style.visibility = 'visible';
+        this.icon.style.visibility = "visible";
+        this.icon.style.pointerEvents = "auto"; // アイコン部分のみポインターイベントを有効にする
         this.hide_timer.start(); // 表示後に非表示タイマーを開始
     }
 
     _hide() {
-        this.icon.style.visibility = 'hidden';
+        this.icon.style.visibility = "hidden";
+        this.icon.style.pointerEvents = "none"; // 非表示時はポインターイベントを無効にする
     }
 
     build_icon() {
-        let icon = document.createElement("img");
-        icon.setAttribute("src", browser.extension.getURL("images/mouseover.png"));
-        icon.setAttribute("id", "link_preview_icon");
-        icon.style.visibility = 'hidden';
-        document.body.appendChild(icon);
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.setAttribute("id", "link_preview_icon");
+        
+        // サイズごとのピクセル値を設定
+        const sizeMap = {
+            small: 16, // 16px
+            medium: 24, // 24px
+            large: 32  // 32px
+        };
+        
+        // 現在のアイコンサイズを取得
+        const currentSize = SETTINGS.iconSize.value || "small";
+        const pixelSize = sizeMap[currentSize] || sizeMap.small;
+        
+        // SVGのサイズを設定
+        svg.setAttribute("width", pixelSize);
+        svg.setAttribute("height", pixelSize);
+        svg.setAttribute("viewBox", `0 0 ${pixelSize} ${pixelSize}`);
+        svg.style.visibility = "hidden";
+        svg.style.position = "absolute";
 
-        // アイコン上にマウスオーバーしたときの処理
-        icon.addEventListener("mouseover", this._on_mouseover.bind(this));
+        // 頂点リスト（修正後）
+        const pointsMap = {
+            small: "1,6 1,9 7,15 15,9 15,5 9,2", // 16px
+            medium: "1,7 1,11 9,19 20,11 20,7 11,2", // 24px
+            large: "1,11 1,17 14,29 30,17 30,10 17,3" // 32px
+        };
+        
+        const points = pointsMap[currentSize];
 
-        // アイコンからマウスアウトしたときの処理
-        icon.addEventListener("mouseout", this._on_mouseout.bind(this));
+        // ポインターイベントを制御するためのポリゴン
+        const polygon = document.createElementNS(svgNS, "polygon");
+        polygon.setAttribute("points", points);
+        polygon.setAttribute("fill", "transparent"); // 背景を透明に設定
+        polygon.style.pointerEvents = "auto"; // ポリゴン内のみポインターイベントを有効にする
 
-        return icon;
+        // 実際のアイコン部分（画像）
+        const iconImage = document.createElementNS(svgNS, "image");
+        const iconPath = browser.runtime.getURL("images/mouseover.png");
+        iconImage.setAttribute("href", iconPath);
+        iconImage.setAttribute("x", "0");
+        iconImage.setAttribute("y", "0");
+        iconImage.setAttribute("width", pixelSize.toString());
+        iconImage.setAttribute("height", pixelSize.toString());
+        iconImage.style.pointerEvents = "none"; // 画像自体のポインターイベントを無効にする
+
+        // SVGに要素を追加
+        svg.appendChild(iconImage);
+        svg.appendChild(polygon);
+        
+        // デバッグモードが有効の場合は赤い枠線を表示
+        if (SETTINGS.debugMode && SETTINGS.debugMode.value === true) {
+            // 赤い枠線を表示するためのポリゴン
+            const debugPolygon = document.createElementNS(svgNS, "polygon");
+            debugPolygon.setAttribute("points", points);
+            debugPolygon.setAttribute("fill", "transparent");
+            debugPolygon.setAttribute("stroke", "red"); // 赤い枠線
+            debugPolygon.setAttribute("stroke-width", "1"); // 枠線の太さ
+            debugPolygon.style.pointerEvents = "none"; // ポインターイベントには反応しない
+            
+            svg.appendChild(debugPolygon);
+            debugLog("デバッグモード有効: アイコンの反応範囲を赤枠で表示しています");
+        }
+
+        document.body.appendChild(svg);
+
+        // イベントリスナーの設定
+        polygon.addEventListener("mouseover", this._on_mouseover.bind(this));
+        polygon.addEventListener("mouseout", this._on_mouseout.bind(this));
+
+        return svg;
     }
 
     _getIconPosition(cursorX, cursorY) {
@@ -550,6 +611,12 @@ async function updatePreviewSettings() {
     // プレビューウィンドウが表示されている場合、右マージン幅を更新
     if (preview_frame.display) {
         document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+    }
+
+    // アイコンを再生成（デバッグモードの変更を反映するため）
+    if (preview_icon.icon) {
+        document.body.removeChild(preview_icon.icon);
+        preview_icon.icon = preview_icon.build_icon();
     }
 
     // アイコンの大きさを更新
