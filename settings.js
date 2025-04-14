@@ -85,6 +85,10 @@ function updateSetting(key, value) {
 
 function debugLog(message, data = null) {
     if (SETTINGS.debugMode?.value ?? false) {
-        console.log(message, data);
+        if (data !== null) {
+            console.log(message, data);
+        } else {
+            console.log(message);
+        }
     }
 }
