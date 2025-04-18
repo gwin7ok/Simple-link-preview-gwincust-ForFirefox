@@ -95,6 +95,28 @@ class PreviewFrame {
         return false;
     }
 
+    /**
+     * YouTubeのURLかどうかを判定し、埋め込みプレーヤーのURLを生成して表示する
+     * @param {string} url - チェックするURL
+     * @returns {boolean} - YouTubeのURLだった場合はtrue、それ以外はfalse
+     */
+    _handleYouTubeUrl(url) {
+        const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/) ||
+                             url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/);
+
+        if (videoIdMatch) {
+            const videoId = videoIdMatch[1];
+            debugLog("YouTube動画IDを検出しました:", videoId);
+
+            // YouTube埋め込みプレーヤーを表示
+            const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+            this.show(embedUrl);
+            return true;
+        }
+
+        return false;
+    }
+
     _onLinkMouseOver(event) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
@@ -113,7 +135,12 @@ class PreviewFrame {
 
         this.currentHoveredUrl = url;
 
-        // プレビューを表示する処理
+        // YouTubeのURLだった場合の処理
+        if (this._handleYouTubeUrl(url)) {
+            return; // YouTubeのURLだった場合は処理を終了
+        }
+
+        // 通常のプレビューを表示
         if (this.display) {
             this.update(url);
         } else {
