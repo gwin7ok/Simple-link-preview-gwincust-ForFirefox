@@ -650,13 +650,13 @@ async function initialize() {
             });
 
             // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
+/*            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
                 if (preview_frame.display) {
                     preview_frame._hide(); // タイマーを使わずに即座に非表示にする
                     debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
                 }
             }
-
+*/
             // 変更された設定値を1つのオブジェクトにまとめる
             const changedSettings = {};
             for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
@@ -699,9 +699,9 @@ async function updatePreviewSettings() {
         preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
     }
 
-    // プレビューウィンドウが表示されている場合、右マージン幅を更新
+    // プレビューウィンドウが表示されている場合、右マージンを更新
     if (preview_frame.display) {
-        document.body.style.marginRight = `${SETTINGS.bodyRightMarginWidthPx.value}px`;
+        preview_frame._applyRightMargin(); // _applyRightMargin を呼び出す
     }
 
     // アイコンを再生成（デバッグモードの変更を反映するため）
