@@ -251,38 +251,41 @@ class PreviewFrame {
         this._display = true;
         debugLog("プレビューを表示します:", url);
 
-    // 短縮URLをバックグラウンドで展開
-    const resolvedUrl = await resolveShortenedUrlViaBackground(url);
-    debugLog("展開されたURL:", resolvedUrl);
+        // 短縮URLをバックグラウンドで展開
+        const resolvedUrl = await resolveShortenedUrlViaBackground(url);
+        debugLog("展開されたURL:", resolvedUrl);
 
-    // YouTubeのURLを埋め込みURLに変換
-    const embedUrl = this._handleYouTubeUrl(resolvedUrl);
-    const finalUrl = embedUrl || resolvedUrl;
+        // YouTubeのURLを埋め込みURLに変換
+        const embedUrl = this._handleYouTubeUrl(resolvedUrl);
+        const finalUrl = embedUrl || resolvedUrl;
 
-    // iframeのURLを更新
-    this.iframe.src = finalUrl;
-    this.frame.style.visibility = 'visible';
+        // iframeのURLを更新
+        this.iframe.src = finalUrl;
+        this.frame.style.visibility = 'visible';
 
-        this._setPreviewState({ previewShowPageUrl: url }); // プレビュー画面に表示するURLを格納
+        this._setPreviewState({ previewShowPageUrl: finalUrl }); // プレビュー画面に表示するURLを格納
 
-        /*
-                // iframeのロード完了後にURLをチェック
-                this.iframe.onload = () => {
-                    try {
-                        const openedUrl = this.iframe.contentWindow.location.href;
-                        debugLog("プレビュー画面で実際に開かれているURL:", openedUrl);
-        
-                        // 実際のURLを_handleYouTubeUrlでチェック
-                        const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
-                        if (newEmbedUrl) {
-                            debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
-                            this._show(newEmbedUrl); // 再コール
-                        }
-                    } catch (error) {
-                        debugLog("プレビュー画面のURL取得中にエラーが発生しました:", error);
-                    }
-                };
-        */
+        // メッセージリスナーを設定
+        const messageHandler = (event) => {
+            // メッセージの種類を確認
+            if (event.data.type === "iframeUrl") {
+                const openedUrl = event.data.url;
+                debugLog("iframe 内で実際に開かれているURL:", openedUrl);
+
+                // 実際のURLを_handleYouTubeUrlでチェック
+                const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
+                if (newEmbedUrl) {
+                    debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
+                    this._show(newEmbedUrl); // 再コール
+                }
+
+                // メッセージリスナーを削除
+                window.removeEventListener("message", messageHandler);
+            }
+        };
+
+        // メッセージリスナーを追加
+        window.addEventListener("message", messageHandler);
     }
 
     // プレビューを非表示
@@ -389,11 +392,36 @@ class PreviewFrame {
               <button class="lprv_btn" id="hide" title="Hide preview frame"></button>
             </div>
           </div>
-          <iframe id="lprv_content"></iframe>
+          <iframe id="lprv_content" sandbox="allow-scripts allow-same-origin"></iframe>
         `;
 
         // プレビューウィンドウの幅を設定
         frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+
+        // iframe の onload イベントを設定
+        const iframe = frame.querySelector('#lprv_content');
+        iframe.onload = () => {
+            try {
+                // iframe.contentDocument が利用可能か確認
+                if (iframe.contentDocument) {
+                    // iframe 内のページで現在のURLを親ウィンドウに送信するスクリプトを挿入
+                    const script = `
+                        window.addEventListener("load", () => {
+                            const currentUrl = window.location.href;
+                            window.parent.postMessage({ type: "iframeUrl", url: currentUrl }, "*");
+                            console.log("メッセージを送信:", { type: "iframeUrl", url: currentUrl });
+                        });
+                    `;
+                    const scriptElement = iframe.contentDocument.createElement("script");
+                    scriptElement.textContent = script;
+                    iframe.contentDocument.body.appendChild(scriptElement);
+                } else {
+                    console.error("iframe.contentDocument にアクセスできません。sandbox 属性を確認してください。");
+                }
+            } catch (error) {
+                console.error("iframe のスクリプト挿入中にエラーが発生しました:", error);
+            }
+        };
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
