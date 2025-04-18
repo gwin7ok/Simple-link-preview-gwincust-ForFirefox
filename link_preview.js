@@ -36,7 +36,7 @@ function on_link_mouseout_doc(event) {
     }
 
     if (event.target.nodeName === 'A') {
-        preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
+        preview_frame._setPreviewState({ currentHoveredUrl: null }); // マウスアウト時に現在のURLをリセット
         if (preview_frame.display) {
             preview_frame.hide();
         }
@@ -44,23 +44,35 @@ function on_link_mouseout_doc(event) {
 }
 
 // メッセージリスナーを追加
-browser.runtime.onMessage.addListener((message) => {
-    switch (message.action) {
-        case "updatePreviewEnabled":
-            debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
-            loadSettings(); // 設定をロード
-            SETTINGS.previewEnabled.value = message.enabled;
-            debugLog("プレビュー機能の状態が更新されました:", message.enabled);
+browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+    try {
+        switch (message.action) {
+            case "updatePreviewEnabled":
+                debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
+                await loadSettings(); // 設定をロード
+                SETTINGS.previewEnabled.value = message.enabled;
+                debugLog("プレビュー機能の状態が更新されました:", message.enabled);
 
-            // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
-            if (!message.enabled && preview_frame.display) {
-                preview_frame._hide();
-            }
-            break;
+                // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
+                if (!message.enabled && preview_frame.display) {
+                    preview_frame._hide();
+                }
 
-        default:
-            debugLog("未対応のメッセージアクション:", message.action);
+                // レスポンスを返す
+                sendResponse({ success: true });
+                break;
+
+            default:
+                debugLog("未対応のメッセージアクション:", message.action);
+                sendResponse({ success: false, error: "Unsupported action" });
+        }
+    } catch (error) {
+        debugLog("onMessage リスナー内でエラーが発生しました:", error);
+        sendResponse({ success: false, error: error.message });
     }
+
+    // 非同期処理が完了するまで待機することを示す
+    return true;
 });
 
 // PreviewFrame クラス
@@ -70,16 +82,37 @@ class PreviewFrame {
         this.frame = this.build_frame();
         this.iframe = this.frame.querySelector('#lprv_content');
 
-        // SETTINGS を使用してロック状態を設定
-        this.locked = SETTINGS.keepPreviewFrameOpen.value || false;
-        this.pendingUrl = null;
-        this.currentHoveredUrl = null;
+        // previewState オブジェクトで URL の状態を管理
+        this.previewState = {
+            currentHoveredUrl: null, // 現在マウスオーバーしているURL
+            pendingUrl: null, // 更新タイマーがスタートする時点でのURL
+            previewShowPageUrl: null // プレビュー画面が表示しているURL（埋め込みURLに変換前）
+        };
 
-        this.pendingUrl = null; // 更新間隔中のURL
-        this.currentHoveredUrl = null; // 現在マウスオーバーしているURL
-        this.show_timer = new Timer(this._show.bind(this), SETTINGS.frameDisplayDelay.value);
+        // プレビューのロック状態
+        this.locked = SETTINGS.keepPreviewFrameOpen.value || false;
+
+        // タイマーの初期化
+        this.show_timer = new Timer((url) => this._show(url), SETTINGS.frameDisplayDelay.value);
         this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.frameDisplayTime.value);
         this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
+    }
+
+    // previewState のプロパティを設定するメソッド
+    _setPreviewState({ currentHoveredUrl = null, pendingUrl = null, previewShowPageUrl = null } = {}) {
+        if (currentHoveredUrl !== null) this.previewState.currentHoveredUrl = currentHoveredUrl;
+        if (pendingUrl !== null) this.previewState.pendingUrl = pendingUrl;
+        if (previewShowPageUrl !== null) this.previewState.previewShowPageUrl = previewShowPageUrl;
+    }
+
+    // 更新タイマー経過前後でマウスオーバーしているURLに変更がないかをチェック
+    _isPendingUrlSameAsCurrentHovered() {
+        return this.previewState.pendingUrl === this.previewState.currentHoveredUrl;
+    }
+
+    // マウスオーバーしているURLとプレビュー画面が表示しているURLが同じかをチェック
+    _isCurrentHoveredUrlSameAsPreviewShowUrl() {
+        return this.previewState.currentHoveredUrl === this.previewState.previewShowPageUrl;
     }
 
     // URLがフィルタリストに一致するかを判定
@@ -97,7 +130,7 @@ class PreviewFrame {
     // YouTubeのURLを判定し、埋め込みURLを生成
     _handleYouTubeUrl(url) {
         const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/) ||
-                             url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/);
+            url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/);
 
         if (videoIdMatch) {
             const videoId = videoIdMatch[1];
@@ -112,8 +145,8 @@ class PreviewFrame {
     _onLinkMouseOver(event) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
-            debugLog("マウスオーバーした要素が<a>タグではないため、プレビューを表示しません:", event.target.nodeName);
-            this.currentHoveredUrl = null;
+            debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
+            this._setPreviewState({ currentHoveredUrl: null });
             return;
         }
 
@@ -121,18 +154,20 @@ class PreviewFrame {
 
         // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
-            debugLog("この URL はフィルタリストに一致するため、プレビューを表示しません:", url);
+            debugLog("この URL はフィルタリストに一致するため、currentHoveredUrl をリセットします:", url);
+            this._setPreviewState({ currentHoveredUrl: null });
             return;
         }
 
-        this.currentHoveredUrl = url;
+        // currentHoveredUrl を更新
+        this._setPreviewState({ currentHoveredUrl: url });
+        debugLog("currentHoveredUrl を更新しました:", this.previewState.currentHoveredUrl);
 
-     
-
-        // 通常のプレビューを表示
+        // プレビュー画面が表示されている場合は更新処理を実行
         if (this.display) {
             this.update(url);
         } else {
+            // プレビュー画面が表示されていない場合はアイコンを表示
             preview_icon.show(url, event.clientX, event.clientY);
         }
     }
@@ -173,18 +208,26 @@ class PreviewFrame {
     }
 
     show(url) {
-        this.url = url;
-        this.show_timer.start();
+        this._setPreviewState({ pendingUrl: url });
+        this.show_timer.start(url);
         this.hide_timer.stop();
     }
 
     // 実際にプレビューを表示
-    _show() {
+    _show(url) {
         this._applyRightMargin(); // プレビュー表示時に右マージンを適用
         this._display = true;
-        debugLog("プレビューを表示します:", this.url);
-        this.iframe.src = this.url;
+        debugLog("プレビューを表示します:", url);
+
+        // YouTubeのURLを埋め込みURLに変換
+        const embedUrl = this._handleYouTubeUrl(url);
+        const finalUrl = embedUrl || url;
+        // iframeのURLを更新
+        this.iframe.src = finalUrl;
         this.frame.style.visibility = 'visible';
+
+        this._setPreviewState({ previewShowPageUrl: url });// プレビュー画面に表示するURLを格納
+ 
     }
 
     // プレビューを非表示
@@ -231,18 +274,18 @@ class PreviewFrame {
         targetElement.style.marginRight = '0';
     }
 
+    // プレビューを更新
     update(url) {
         // プレビュー画面に表示されているURLと同じ場合は何もしない
-        if (this.iframe.src === url) {
+        if (this._isCurrentHoveredUrlSameAsPreviewShowUrl()) {
             debugLog("プレビュー画面にすでに表示されているURLのため、更新をスキップします:", url);
             return;
         }
 
-        // 更新タイマーを開始
+        this._setPreviewState({ pendingUrl: url });
         this.hide_timer.stop(); // 非表示タイマーを停止
         debugLog("更新間隔タイマーを開始します:", url);
-        this.update_timer.start(url); // 引数としてURLを渡す
-
+        this.update_timer.start(url);
     }
 
     // 実際にプレビューを更新
@@ -254,29 +297,29 @@ class PreviewFrame {
             debugLog("マウスポインタがプレビュー画面上にあるため、URLの更新をスキップします:", url);
             return;
         }
-        debugLog("マウスポインタがプレビュー画面上にないため、URLの更新を実行します:", url);
+
         // 更新時間経過後にマウスオーバーしているURLと一致している場合のみ更新
-        if (url && url === this.currentHoveredUrl) {
+        if (this._isPendingUrlSameAsCurrentHovered()) {
             debugLog("更新時間経過前後でマウスオーバーしているURLが一致しているのでプレビューを更新します:", url);
-            this.iframe.src = url;
+
+            // YouTubeのURLを埋め込みURLに変換
+            const embedUrl = this._handleYouTubeUrl(url);
+            const finalUrl = embedUrl || url;
+
+
+            // iframeのURLを更新
+            this.iframe.src = finalUrl;
+            // プレビュー画面に表示するURLを格納（埋め込みURLではなく通常のURL）
+            this._setPreviewState({ previewShowPageUrl: url });
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
             // currentHoveredUrl が有効な URL の場合、再度 update() を呼び出す
-            if (this.currentHoveredUrl) {
-                debugLog("マウスポインタが移動後にURLをマウスオーバーしているので再度更新を試みます:", this.currentHoveredUrl);
-                this.update(this.currentHoveredUrl);
+            if (this.previewState.currentHoveredUrl) {
+                debugLog("マウスポインタが移動後にURLをマウスオーバーしているので再度更新を試みます:", this.previewState.currentHoveredUrl);
+                this.update(this.previewState.currentHoveredUrl);
             }
         }
-        const embedUrl = this._handleYouTubeUrl(url);
-        const finalUrl = embedUrl || url;
-
-        this.iframe.src = finalUrl;
-        this.currentHoveredUrl = url;
-
-
-
-
         this.hide(); // 更新後に非表示タイマーを開始
     }
 
@@ -410,7 +453,8 @@ class PreviewIcon {
         this.show_timer = new Timer(this._show.bind(this), SETTINGS.iconDisplayDelay.value);
         this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.iconDisplayTime.value);
         this.icon = this.build_icon();
-        this.url = null; // 表示するリンクの URL を保持
+        this.polygon = null; // ポリゴン要素を保持するプロパティ
+        this.urlForPreview = null; // 表示するリンクの URL を保持
         this.mousePosition = { x: 0, y: 0 }; // マウスポインタの位置を保持
         this.isMouseOverIcon = false; // アイコン上にマウスオーバーしているかを追跡
 
@@ -443,11 +487,11 @@ class PreviewIcon {
         }
 
         // 新しい URL をマウスオーバーした場合、既存のアイコンを非表示タイマーで消す
-        if (this.url !== url) {
+        if (this.urlForPreview !== url) {
             this.hide_timer.start(); // 一定時間後に消す
         }
 
-        this.url = url;
+        this.urlForPreview = url;
         this.show_timer.stop();
         this.show_timer.start();
     }
@@ -469,29 +513,41 @@ class PreviewIcon {
         this.icon.style.visibility = "visible";
         this.icon.style.pointerEvents = "auto"; // アイコン部分のみポインターイベントを有効にする
         this.hide_timer.start(); // 表示後に非表示タイマーを開始
+
+        // ポリゴンイベントリスナーを再設定
+        if (this.polygon) {
+            this.polygon.addEventListener("mouseover", this._on_mouseover.bind(this));
+            this.polygon.addEventListener("mouseout", this._on_mouseout.bind(this));
+        }
     }
 
     _hide() {
         this.icon.style.visibility = "hidden";
         this.icon.style.pointerEvents = "none"; // 非表示時はポインターイベントを無効にする
+
+        // ポリゴンイベントリスナーを削除
+        if (this.polygon) {
+            this.polygon.removeEventListener("mouseover", this._on_mouseover.bind(this));
+            this.polygon.removeEventListener("mouseout", this._on_mouseout.bind(this));
+        }
     }
 
     build_icon() {
         const svgNS = "http://www.w3.org/2000/svg";
         const svg = document.createElementNS(svgNS, "svg");
         svg.setAttribute("id", "link_preview_icon");
-        
+
         // サイズごとのピクセル値を設定
         const sizeMap = {
             small: 16, // 16px
             medium: 24, // 24px
             large: 32  // 32px
         };
-        
+
         // 現在のアイコンサイズを取得
         const currentSize = SETTINGS.iconSize.value || "small";
         const pixelSize = sizeMap[currentSize] || sizeMap.small;
-        
+
         // SVGのサイズを設定
         svg.setAttribute("width", pixelSize);
         svg.setAttribute("height", pixelSize);
@@ -505,14 +561,14 @@ class PreviewIcon {
             medium: "1,7 1,11 9,19 20,11 20,7 11,2", // 24px
             large: "1,11 1,17 14,29 30,17 30,10 17,3" // 32px
         };
-        
+
         const points = pointsMap[currentSize];
 
         // ポインターイベントを制御するためのポリゴン
-        const polygon = document.createElementNS(svgNS, "polygon");
-        polygon.setAttribute("points", points);
-        polygon.setAttribute("fill", "transparent"); // 背景を透明に設定
-        polygon.style.pointerEvents = "auto"; // ポリゴン内のみポインターイベントを有効にする
+        const bi_polygon = document.createElementNS(svgNS, "polygon");
+        bi_polygon.setAttribute("points", points);
+        bi_polygon.setAttribute("fill", "transparent"); // 背景を透明に設定
+        bi_polygon.style.pointerEvents = "auto"; // ポリゴン内のみポインターイベントを有効にする
 
         // 実際のアイコン部分（画像）
         const iconImage = document.createElementNS(svgNS, "image");
@@ -526,8 +582,8 @@ class PreviewIcon {
 
         // SVGに要素を追加
         svg.appendChild(iconImage);
-        svg.appendChild(polygon);
-        
+        svg.appendChild(bi_polygon);
+
         // デバッグモードが有効の場合は赤い枠線を表示
         if (SETTINGS.debugMode && SETTINGS.debugMode.value === true) {
             // 赤い枠線を表示するためのポリゴン
@@ -537,16 +593,18 @@ class PreviewIcon {
             debugPolygon.setAttribute("stroke", "red"); // 赤い枠線
             debugPolygon.setAttribute("stroke-width", "1"); // 枠線の太さ
             debugPolygon.style.pointerEvents = "none"; // ポインターイベントには反応しない
-            
+
             svg.appendChild(debugPolygon);
             debugLog("デバッグモード有効: アイコンの反応範囲を赤枠で表示しています");
         }
 
         document.body.appendChild(svg);
 
+
+        this.polygon =bi_polygon; // ポリゴン要素を保存
         // イベントリスナーの設定
-        polygon.addEventListener("mouseover", this._on_mouseover.bind(this));
-        polygon.addEventListener("mouseout", this._on_mouseout.bind(this));
+        this.polygon.addEventListener("mouseover", this._on_mouseover.bind(this));
+        this.polygon.addEventListener("mouseout", this._on_mouseout.bind(this));
 
         return svg;
     }
@@ -560,7 +618,7 @@ class PreviewIcon {
     _on_mouseover(e) {
         this.isMouseOverIcon = true; // フラグを true に設定
         this.hide_timer.stop();
-        preview_frame.show(this.url);
+        preview_frame.show(this.urlForPreview);
     }
 
     _on_mouseout(e) {
@@ -578,7 +636,7 @@ async function initialize() {
         updatePreviewSettings(); // プレビュー設定を更新
     });
 
- 
+
     // 設定が変更されたときに再読み込み
     browser.storage.onChanged.addListener(async (changes, area) => {
         if (area === "local") {
