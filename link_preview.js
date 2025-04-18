@@ -9,6 +9,7 @@ Modifications by gwin7ok
 Copyright (c) 2025 gwin7ok
 */
 
+// SETTINGS の確認
 if (typeof SETTINGS === 'undefined') {
     console.error("[console()]SETTINGS が定義されていません。settings.js が正しく読み込まれているか確認してください。");
 } else {
@@ -21,20 +22,20 @@ debugLog("link_preview.js is loaded");
 let preview_frame;
 let preview_icon;
 
-// 関数定義部分を上部に移動
+// マウスオーバー時の処理
 function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
-
     preview_frame._onLinkMouseOver(event);
 }
 
+// マウスアウト時の処理
 function on_link_mouseout_doc(event) {
     if (!preview_frame) {
         debugLog("preview_frame が未定義のため、on_link_mouseout_doc をスキップします");
         return;
     }
 
-    if (event.target.nodeName == 'A') {
+    if (event.target.nodeName === 'A') {
         preview_frame.currentHoveredUrl = null; // マウスアウト時に現在のURLをリセット
         if (preview_frame.display) {
             preview_frame.hide();
@@ -62,7 +63,7 @@ browser.runtime.onMessage.addListener((message) => {
     }
 });
 
-// PreviewFrame クラスの定義を先頭に移動
+// PreviewFrame クラス
 class PreviewFrame {
     constructor() {
         this._display = false;
@@ -71,7 +72,8 @@ class PreviewFrame {
 
         // SETTINGS を使用してロック状態を設定
         this.locked = SETTINGS.keepPreviewFrameOpen.value || false;
-        this._updatePinButtonState(); // ピンボタンの状態を更新
+        this.pendingUrl = null;
+        this.currentHoveredUrl = null;
 
         this.pendingUrl = null; // 更新間隔中のURL
         this.currentHoveredUrl = null; // 現在マウスオーバーしているURL
@@ -80,26 +82,19 @@ class PreviewFrame {
         this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
     }
 
+    // URLがフィルタリストに一致するかを判定
     _shouldIgnoreUrl(url) {
-        // URL フィルタリストを取得
-        const filterList = SETTINGS.urlFilterList.value || []; // 配列形式で保持されている
-
-        // フィルタリストに一致する文字列が含まれている場合は true を返す
+        const filterList = SETTINGS.urlFilterList.value || [];
         for (const filter of filterList) {
             if (url.includes(filter)) {
                 debugLog(`URL がフィルタリストに一致しました: ${filter}`);
                 return true;
             }
         }
-
         return false;
     }
 
-    /**
-     * YouTubeのURLかどうかを判定し、埋め込みプレーヤーのURLを生成して表示する
-     * @param {string} url - チェックするURL
-     * @returns {boolean} - YouTubeのURLだった場合はtrue、それ以外はfalse
-     */
+    // YouTubeのURLを判定し、埋め込みURLを生成
     _handleYouTubeUrl(url) {
         const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/) ||
                              url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/);
@@ -107,16 +102,13 @@ class PreviewFrame {
         if (videoIdMatch) {
             const videoId = videoIdMatch[1];
             debugLog("YouTube動画IDを検出しました:", videoId);
-
-            // YouTube埋め込みプレーヤーを表示
-            const embedUrl = `https://www.youtube.com/embed/${videoId}`;
-            this.show(embedUrl);
-            return true;
+            return `https://www.youtube.com/embed/${videoId}`;
         }
 
-        return false;
+        return null;
     }
 
+    // マウスオーバー時の処理
     _onLinkMouseOver(event) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
@@ -127,7 +119,7 @@ class PreviewFrame {
 
         const url = linkElement.href;
 
-        // URL がフィルタリストに一致する場合は処理をスキップ
+        // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
             debugLog("この URL はフィルタリストに一致するため、プレビューを表示しません:", url);
             return;
@@ -135,10 +127,7 @@ class PreviewFrame {
 
         this.currentHoveredUrl = url;
 
-        // YouTubeのURLだった場合の処理
-        if (this._handleYouTubeUrl(url)) {
-            return; // YouTubeのURLだった場合は処理を終了
-        }
+     
 
         // 通常のプレビューを表示
         if (this.display) {
@@ -189,15 +178,16 @@ class PreviewFrame {
         this.hide_timer.stop();
     }
 
+    // 実際にプレビューを表示
     _show() {
         this._applyRightMargin(); // プレビュー表示時に右マージンを適用
         this._display = true;
-
         debugLog("プレビューを表示します:", this.url);
         this.iframe.src = this.url;
         this.frame.style.visibility = 'visible';
     }
 
+    // プレビューを非表示
     hide() {
         debugLog("hide() called. Current locked state:", this.locked);
 
@@ -216,6 +206,7 @@ class PreviewFrame {
         }
     }
 
+    // 実際にプレビューを非表示
     _hide() {
         this._display = false;
         debugLog("プレビューを非表示にします");
@@ -254,6 +245,7 @@ class PreviewFrame {
 
     }
 
+    // 実際にプレビューを更新
     _update(url) {
         debugLog("更新間隔タイマーが終了しました。プレビューを更新します:", url);
 
@@ -276,6 +268,15 @@ class PreviewFrame {
                 this.update(this.currentHoveredUrl);
             }
         }
+        const embedUrl = this._handleYouTubeUrl(url);
+        const finalUrl = embedUrl || url;
+
+        this.iframe.src = finalUrl;
+        this.currentHoveredUrl = url;
+
+
+
+
         this.hide(); // 更新後に非表示タイマーを開始
     }
 
