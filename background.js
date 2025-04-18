@@ -96,3 +96,20 @@ function sendMessageToActiveTabs(message) {
         }
     });
 }
+
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'resolveUrl') {
+        fetch(message.url, {
+            method: 'GET',
+            redirect: 'follow',
+        })
+        .then(response => {
+            sendResponse({ success: true, resolvedUrl: response.url });
+        })
+        .catch(err => {
+            sendResponse({ success: false, resolvedUrl: message.url, error: err.message });
+        });
+
+        return true; // sendResponseを非同期で使うためにtrueを返す
+    }
+});

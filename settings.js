@@ -36,7 +36,20 @@ const SETTINGS = {
         value: null,
         default: ["youtube.com,#content", "x.com,#react-root"] // 配列形式でデフォルト値を設定
     },
-    youtubeAutoplay: { default: true, elementId: "youtube-autoplay", value: null } // デフォルトは自動再生無効
+    youtubeAutoplay: { default: true, elementId: "youtube-autoplay", value: null }, // デフォルトは自動再生無効
+    shortenedUrlDomains: {
+        default: [
+            "bit.ly",
+            "t.co",
+            "tinyurl.com",
+            "goo.gl",
+            "ow.ly",
+            "is.gd",
+            "buff.ly",
+            "adf.ly"
+        ],
+        value: null
+    }
 };
 
 // ローカルストレージから設定値をロード

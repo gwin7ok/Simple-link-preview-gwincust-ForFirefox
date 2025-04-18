@@ -127,6 +127,19 @@ class PreviewFrame {
         return false;
     }
 
+    // 短縮URLかどうかを判定
+    _isShortenedUrl(url) {
+        const shortenedUrlDomains = SETTINGS.shortenedUrlDomains.value ?? SETTINGS.shortenedUrlDomains.default;
+
+        try {
+            const urlObj = new URL(url);
+            return shortenedUrlDomains.some(domain => urlObj.hostname.includes(domain));
+        } catch (error) {
+            debugLog("URLの解析中にエラーが発生しました:", error);
+            return false;
+        }
+    }
+
     // YouTubeのURLを判定し、埋め込みURLを生成
     _handleYouTubeUrl(url) {
         const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/) ||
@@ -147,7 +160,7 @@ class PreviewFrame {
     }
 
     // マウスオーバー時の処理
-    _onLinkMouseOver(event) {
+    async _onLinkMouseOver(event) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
             debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
@@ -155,7 +168,14 @@ class PreviewFrame {
             return;
         }
 
-        const url = linkElement.href;
+        let url = linkElement.href;
+
+        // 短縮URLを展開
+        if (this._isShortenedUrl(url)) {
+            debugLog("短縮URLを検出しました。展開を試みます:", url);
+            url = await resolveShortenedUrl(url);
+            debugLog("展開されたURL:", url);
+        }
 
         // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
@@ -164,7 +184,7 @@ class PreviewFrame {
             return;
         }
 
-        // currentHoveredUrl を更新
+        // 以降の処理を実行
         this._setPreviewState({ currentHoveredUrl: url });
         debugLog("currentHoveredUrl を更新しました:", this.previewState.currentHoveredUrl);
 
@@ -724,3 +744,42 @@ if (SETTINGS.previewEnabled.value === undefined) {
 // イベントリスナーを追加
 document.addEventListener('mouseover', on_link_mouseover_doc);
 document.addEventListener('mouseout', on_link_mouseout_doc);
+
+// 短縮URLを展開する関数
+async function resolveShortenedUrl(shortUrl) {
+    try {
+        // まずは HEAD リクエストで試す
+        let response = await fetch(shortUrl, {
+            method: 'HEAD',
+            mode: 'cors',
+            redirect: 'follow',
+        });
+
+        return response.url;
+    } catch (headError) {
+        console.warn('HEADリクエスト失敗。GETで再試行:', shortUrl);
+
+        try {
+            // HEAD が CORS で弾かれたら GET で再試行
+            let response = await fetch(shortUrl, {
+                method: 'GET',
+                mode: 'cors',
+                redirect: 'follow',
+            });
+
+            return response.url;
+        } catch (getError) {
+            console.warn('GETリクエストも失敗:', shortUrl, getError);
+            return shortUrl;
+        }
+    }
+}
+
+async function resolveShortenedUrlViaBackground(shortUrl) {
+    const response = await browser.runtime.sendMessage({
+        type: 'resolveUrl',
+        url: shortUrl,
+    });
+
+    return response.success ? response.resolvedUrl : shortUrl;
+}
