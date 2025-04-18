@@ -30,6 +30,8 @@ div#lprv_frame {
     z-index: 2147483647;
 }
 
+
+
 div#lprv_vresize {
     width: 3px;
     height: 100%;
@@ -108,9 +110,22 @@ iframe#lprv_content {
 .lprv_toolbar #open_tab {
     background:url('moz-extension://__MSG_@@extension_id__/images/new-tab.svg');
 }
+
+/* ロックピンのデフォルトスタイル */
 .lprv_toolbar #push-pin {
     background:url('moz-extension://__MSG_@@extension_id__/images/push-pin.svg');
+    border: 1px solid gray; /* デフォルトの薄い枠線 */
+    border-radius: 4px; /* 角を少し丸める */
+    padding: 2px; /* 内側の余白 */
 }
+
+/* ロックピンが押されたときのスタイル */
+.lprv_toolbar #push-pin[locked="yes"] {
+    border: 2px solid #0078d7; /* 太い青色の枠線 */
+    box-shadow: 0 0 5px rgba(0, 120, 215, 0.5); /* 視覚的な強調 */
+    background-color: rgba(0, 120, 215, 0.1); /* 背景色を薄い青に変更 */
+}
+
 .lprv_toolbar #push-pin[locked=yes] {
     box-shadow: inset 0 0 .25rem #000000;
 }
