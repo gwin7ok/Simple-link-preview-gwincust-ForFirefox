@@ -142,6 +142,13 @@ class PreviewFrame {
 
     // YouTubeのURLを判定し、埋め込みURLを生成
     _handleYouTubeUrl(url) {
+        // 既に埋め込み型のYouTube URLの場合は null を返す
+        if (url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/[^?]+/)) {
+            debugLog("既に埋め込み型のYouTube URLです:", url);
+            return null;
+        }
+
+        // 通常のYouTube URLを埋め込み型に変換
         const videoIdMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([^&]+)/) ||
             url.match(/(?:https?:\/\/)?(?:www\.)?youtu\.be\/([^?]+)/);
 
@@ -156,7 +163,7 @@ class PreviewFrame {
             return `https://www.youtube.com/embed/${videoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
 
-        return null;
+        return null; // YouTube URLでない場合は null を返す
     }
 
     // マウスオーバー時の処理
@@ -239,20 +246,43 @@ class PreviewFrame {
     }
 
     // 実際にプレビューを表示
-    _show(url) {
+    async _show(url) {
         this._applyRightMargin(); // プレビュー表示時に右マージンを適用
         this._display = true;
         debugLog("プレビューを表示します:", url);
 
-        // YouTubeのURLを埋め込みURLに変換
-        const embedUrl = this._handleYouTubeUrl(url);
-        const finalUrl = embedUrl || url;
-        // iframeのURLを更新
-        this.iframe.src = finalUrl;
-        this.frame.style.visibility = 'visible';
+    // 短縮URLをバックグラウンドで展開
+    const resolvedUrl = await resolveShortenedUrlViaBackground(url);
+    debugLog("展開されたURL:", resolvedUrl);
 
-        this._setPreviewState({ previewShowPageUrl: url });// プレビュー画面に表示するURLを格納
- 
+    // YouTubeのURLを埋め込みURLに変換
+    const embedUrl = this._handleYouTubeUrl(resolvedUrl);
+    const finalUrl = embedUrl || resolvedUrl;
+
+    // iframeのURLを更新
+    this.iframe.src = finalUrl;
+    this.frame.style.visibility = 'visible';
+
+        this._setPreviewState({ previewShowPageUrl: url }); // プレビュー画面に表示するURLを格納
+
+        /*
+                // iframeのロード完了後にURLをチェック
+                this.iframe.onload = () => {
+                    try {
+                        const openedUrl = this.iframe.contentWindow.location.href;
+                        debugLog("プレビュー画面で実際に開かれているURL:", openedUrl);
+        
+                        // 実際のURLを_handleYouTubeUrlでチェック
+                        const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
+                        if (newEmbedUrl) {
+                            debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
+                            this._show(newEmbedUrl); // 再コール
+                        }
+                    } catch (error) {
+                        debugLog("プレビュー画面のURL取得中にエラーが発生しました:", error);
+                    }
+                };
+        */
     }
 
     // プレビューを非表示
@@ -327,15 +357,7 @@ class PreviewFrame {
         if (this._isPendingUrlSameAsCurrentHovered()) {
             debugLog("更新時間経過前後でマウスオーバーしているURLが一致しているのでプレビューを更新します:", url);
 
-            // YouTubeのURLを埋め込みURLに変換
-            const embedUrl = this._handleYouTubeUrl(url);
-            const finalUrl = embedUrl || url;
-
-
-            // iframeのURLを更新
-            this.iframe.src = finalUrl;
-            // プレビュー画面に表示するURLを格納（埋め込みURLではなく通常のURL）
-            this._setPreviewState({ previewShowPageUrl: url });
+            this._show(url); // プレビューを表示
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
@@ -626,7 +648,7 @@ class PreviewIcon {
         document.body.appendChild(svg);
 
 
-        this.polygon =bi_polygon; // ポリゴン要素を保存
+        this.polygon = bi_polygon; // ポリゴン要素を保存
         // イベントリスナーの設定
         this.polygon.addEventListener("mouseover", this._on_mouseover.bind(this));
         this.polygon.addEventListener("mouseout", this._on_mouseout.bind(this));
@@ -670,13 +692,13 @@ async function initialize() {
             });
 
             // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-/*            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
-                if (preview_frame.display) {
-                    preview_frame._hide(); // タイマーを使わずに即座に非表示にする
-                    debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
-                }
-            }
-*/
+            /*            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
+                            if (preview_frame.display) {
+                                preview_frame._hide(); // タイマーを使わずに即座に非表示にする
+                                debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
+                            }
+                        }
+            */
             // 変更された設定値を1つのオブジェクトにまとめる
             const changedSettings = {};
             for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
@@ -776,10 +798,21 @@ async function resolveShortenedUrl(shortUrl) {
 }
 
 async function resolveShortenedUrlViaBackground(shortUrl) {
-    const response = await browser.runtime.sendMessage({
-        type: 'resolveUrl',
-        url: shortUrl,
-    });
+    try {
+        const response = await browser.runtime.sendMessage({
+            type: 'resolveUrl',
+            url: shortUrl,
+        });
 
-    return response.success ? response.resolvedUrl : shortUrl;
+        if (response && response.success) {
+            debugLog("バックグラウンドで展開されたURL:", response.resolvedUrl);
+            return response.resolvedUrl;
+        } else {
+            debugLog("バックグラウンドでのURL展開に失敗しました。元のURLを返します:", shortUrl);
+            return shortUrl;
+        }
+    } catch (error) {
+        console.error("resolveShortenedUrlViaBackground 内でエラーが発生しました:", error);
+        return shortUrl; // エラーが発生した場合は元のURLを返す
+    }
 }

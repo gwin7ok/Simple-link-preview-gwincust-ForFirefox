@@ -97,19 +97,30 @@ function sendMessageToActiveTabs(message) {
     });
 }
 
+browser.webRequest.onBeforeRedirect.addListener(
+    (details) => {
+        // リダイレクト先のURLを保存
+        browser.runtime.sendMessage({
+            type: 'redirectDetected',
+            originalUrl: details.url,
+            redirectedUrl: details.redirectUrl,
+        });
+    },
+    { urls: ["<all_urls>"] }, // すべてのURLを監視
+    ["responseHeaders"]
+);
+
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'resolveUrl') {
-        fetch(message.url, {
-            method: 'GET',
-            redirect: 'follow',
-        })
-        .then(response => {
-            sendResponse({ success: true, resolvedUrl: response.url });
-        })
-        .catch(err => {
-            sendResponse({ success: false, resolvedUrl: message.url, error: err.message });
-        });
+        fetch(message.url, { method: 'HEAD', redirect: 'follow' })
+            .then((response) => {
+                sendResponse({ success: true, resolvedUrl: response.url });
+            })
+            .catch((error) => {
+                console.error('URL解決中にエラーが発生しました:', error);
+                sendResponse({ success: false });
+            });
 
-        return true; // sendResponseを非同期で使うためにtrueを返す
+        return true; // 非同期レスポンスを示す
     }
 });
