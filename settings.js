@@ -35,7 +35,8 @@ const SETTINGS = {
         elementId: "customMarginSelectors",
         value: null,
         default: ["youtube.com,#content", "x.com,#react-root"] // 配列形式でデフォルト値を設定
-    }
+    },
+    youtubeAutoplay: { default: true, elementId: "youtube-autoplay", value: null } // デフォルトは自動再生無効
 };
 
 // ローカルストレージから設定値をロード
@@ -52,7 +53,7 @@ function loadSettings() {
 
             // 型変換を適用
             if (typeof config.default === "boolean") {
-                value = value === "true" || value === true;
+                value = value === true || value === "true"; // 明確に型変換
             } else if (typeof config.default === "number") {
                 value = Number(value);
             } else if (Array.isArray(config.default)) {
@@ -78,7 +79,12 @@ function loadSettings() {
 function updateSetting(key, value) {
     if (SETTINGS[key]) {
         SETTINGS[key].value = value;
-        return browser.storage.local.set({ [key]: value });
+        debugLog(`設定を更新します: ${key} = ${value}`);
+        return browser.storage.local.set({ [key]: value }).then(() => {
+            debugLog(`設定がローカルストレージに保存されました: ${key} = ${value}`);
+        }).catch((error) => {
+            console.error(`設定の保存中にエラーが発生しました: ${key}`, error);
+        });
     }
     return Promise.reject(`Invalid setting key: ${key}`);
 }

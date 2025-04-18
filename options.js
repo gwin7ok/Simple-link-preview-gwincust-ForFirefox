@@ -49,6 +49,8 @@ async function initializeSettings() {
                 debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);
             }
         }
+    }).catch((error) => {
+        console.error("設定のロード中にエラーが発生しました:", error);
     });
 }
 
@@ -84,6 +86,8 @@ if (document.location.pathname.endsWith('options.html')) {
                 // 設定を更新
                 updateSetting(key, newValue).then(() => {
                     debugLog(`設定を保存しました: ${key} = ${newValue}`);
+                }).catch((error) => {
+                    console.error(`設定の保存中にエラーが発生しました: ${key}`, error);
                 });
             } else {
                 debugLog(`指定された ID の要素が見つかりませんでした: ${config.elementId}`);

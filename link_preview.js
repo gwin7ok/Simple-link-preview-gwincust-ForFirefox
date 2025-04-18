@@ -135,7 +135,12 @@ class PreviewFrame {
         if (videoIdMatch) {
             const videoId = videoIdMatch[1];
             debugLog("YouTube動画IDを検出しました:", videoId);
-            return `https://www.youtube.com/embed/${videoId}`;
+
+            // YouTube自動再生設定を取得
+            const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
+
+            // autoplay=1 を追加するかどうかを制御
+            return `https://www.youtube.com/embed/${videoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
 
         return null;
