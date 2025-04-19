@@ -184,8 +184,8 @@ class PreviewFrame {
             debugLog("展開されたURL:", url);
         }
 
-        // 直前のURLと同じ場合は何もしない
-        if (this.previewState.lastHoveredUrl === url) {
+        // 直前のURLと同じ場合でかつアイコンが表示されているときは何もしない
+        if (preview_icon.isVisible() && this.previewState.lastHoveredUrl === url) {
             debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
             return;
         }
@@ -600,6 +600,8 @@ class PreviewIcon {
         this.icon.style.top = pos.y + "px";
         this.icon.style.visibility = "visible";
         this.icon.style.pointerEvents = "auto"; // アイコン部分のみポインターイベントを有効にする
+        this.icon.style.zIndex = "9999";
+        debugLog("アイコンのスタイル:", this.icon.style);
         this.hide_timer.start(); // 表示後に非表示タイマーを開始
 
         // ポリゴンイベントリスナーを再設定
@@ -698,8 +700,8 @@ class PreviewIcon {
     }
 
     _getIconPosition(cursorX, cursorY) {
-        const posX = cursorX + SETTINGS.iconDisplayOffsetX.value;
-        const posY = cursorY + SETTINGS.iconDisplayOffsetY.value;
+        const posX = cursorX + SETTINGS.iconDisplayOffsetX.value + window.scrollX;
+        const posY = cursorY + SETTINGS.iconDisplayOffsetY.value + window.scrollY;
         return { x: posX, y: posY };
     }
 
@@ -713,6 +715,10 @@ class PreviewIcon {
         this.isMouseOverIcon = false; // フラグを false に設定
         this.hide_timer.start();
         preview_frame.hide();
+    }
+
+    isVisible() {
+        return this.icon.style.visibility === "visible";
     }
 }
 
