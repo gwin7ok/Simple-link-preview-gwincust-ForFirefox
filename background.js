@@ -97,6 +97,7 @@ function sendMessageToActiveTabs(message) {
     });
 }
 
+/* resolveShortenedUrl関数の実装によりbackgroundで短縮URLを展開してメッセージで返す必要がなくなったのでコメントアウト
 browser.webRequest.onBeforeRedirect.addListener(
     (details) => {
         // リダイレクト先のURLを保存
@@ -109,7 +110,7 @@ browser.webRequest.onBeforeRedirect.addListener(
     { urls: ["<all_urls>"] }, // すべてのURLを監視
     ["responseHeaders"]
 );
-
+*/
 
 /* resolveShortenedUrl関数の実装によりbackgroundで短縮URLを展開してメッセージで返す必要がなくなったのでコメントアウト
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {

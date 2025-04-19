@@ -163,6 +163,31 @@ class PreviewFrame {
             return `https://www.youtube.com/embed/${videoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
 
+        // YouTubeライブURLを埋め込み型に変換
+        const liveUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/live\/([\w-]+)/);
+        if (liveUrlMatch) {
+            const liveVideoId = liveUrlMatch[1];
+            debugLog("YouTubeライブ動画IDを検出しました:", liveVideoId);
+
+            // autoplay=1 を追加するかどうかを制御
+            const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
+
+            return `https://www.youtube.com/embed/${liveVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
+        }
+
+/*  shorts動画は45秒で再生が止まる問題がないので通常のURL開く        
+        // YouTube Shorts URLを埋め込み型に変換
+        const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
+        if (shortsUrlMatch) {
+            const shortsVideoId = shortsUrlMatch[1];
+            debugLog("YouTube Shorts動画IDを検出しました:", shortsVideoId);
+
+            // autoplay=1 を追加するかどうかを制御
+            const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
+
+            return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
+        }
+*/
         return null; // YouTube URLでない場合は null を返す
     }
 
