@@ -314,29 +314,6 @@ class PreviewFrame {
 
         this._setPreviewState({ previewShowPageUrl: resolvedUrl }); // プレビュー画面に表示するURLを格納
 
-        /*  //resolveShortenedUrl() の実装により、iframe にスクリプトを挿入して開いているページのURLを送信する必要がなくなったため、以下のコードはコメントアウトしています。
-                // メッセージリスナーを設定
-                const messageHandler = (event) => {
-                    // メッセージの種類を確認
-                    if (event.data.type === "iframeUrl") {
-                        const openedUrl = event.data.url;
-                        debugLog("iframe 内で実際に開かれているURL:", openedUrl);
-        
-                        // 実際のURLを_handleYouTubeUrlでチェック
-                        const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
-                        if (newEmbedUrl) {
-                            debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
-                            this._show(newEmbedUrl); // 再コール
-                        }
-        
-                        // メッセージリスナーを削除
-                        window.removeEventListener("message", messageHandler);
-                    }
-                };
-        
-                // メッセージリスナーを追加
-                window.addEventListener("message", messageHandler);
-        */
     }
 
     // プレビューを非表示
@@ -449,32 +426,6 @@ class PreviewFrame {
         // プレビューウィンドウの幅を設定
         frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
 
-        /* resolveShortenedUrl() の実装により、iframe にスクリプトを挿入して開いているページのURLを送信する必要がなくなったため、以下のコードはコメントアウトしています。
-        // iframe の onload イベントを設定
-        const iframe = frame.querySelector('#lprv_content');
-        iframe.onload = () => {
-            try {
-                // iframe.contentDocument が利用可能か確認
-                if (iframe.contentDocument) {
-                    // iframe 内のページで現在のURLを親ウィンドウに送信するスクリプトを挿入
-                    const script = `
-                        window.addEventListener("load", () => {
-                            const currentUrl = window.location.href;
-                            window.parent.postMessage({ type: "iframeUrl", url: currentUrl }, "*");
-                            console.log("メッセージを送信:", { type: "iframeUrl", url: currentUrl });
-                        });
-                    `;
-                    const scriptElement = iframe.contentDocument.createElement("script");
-                    scriptElement.textContent = script;
-                    iframe.contentDocument.body.appendChild(scriptElement);
-                } else {
-                    console.error("iframe.contentDocument にアクセスできません。sandbox 属性を確認してください。");
-                }
-            } catch (error) {
-                console.error("iframe のスクリプト挿入中にエラーが発生しました:", error);
-            }
-        };
-*/
 
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
