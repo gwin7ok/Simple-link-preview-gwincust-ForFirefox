@@ -264,7 +264,7 @@ class PreviewFrame {
         this.iframe.src = finalUrl;
         this.frame.style.visibility = 'visible';
 
-        this._setPreviewState({ previewShowPageUrl: finalUrl }); // プレビュー画面に表示するURLを格納
+        this._setPreviewState({ previewShowPageUrl: resolvedUrl }); // プレビュー画面に表示するURLを格納
 
         /*  //resolveShortenedUrl() の実装により、iframe にスクリプトを挿入して開いているページのURLを送信する必要がなくなったため、以下のコードはコメントアウトしています。
                 // メッセージリスナーを設定
