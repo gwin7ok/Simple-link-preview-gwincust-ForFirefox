@@ -96,6 +96,9 @@ class PreviewFrame {
         this.show_timer = new Timer((url) => this._show(url), SETTINGS.frameDisplayDelay.value);
         this.hide_timer = new Timer(this._hide.bind(this), SETTINGS.frameDisplayTime.value);
         this.update_timer = new Timer((url) => this._update(url), SETTINGS.frameUpdateTime.value);
+
+        // ロックピンの状態を更新
+        this._updatePinButtonState();
     }
 
     // previewState のプロパティを設定するメソッド
