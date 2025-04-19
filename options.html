@@ -34,11 +34,27 @@ Copyright (c) 2025 gwin7ok
             プレビューを常に固定する
         </label>
         <br>
-        <label for="iconSize" style="display: inline-block; width: 200px;">アイコンの大きさ:</label>
+        <label for="iconSize" style="display: inline-block; width: 300px;">アイコンの大きさ:</label>
         <select id="iconSize" style="display: inline-block;">
             <option value="small">小</option>
             <option value="medium">中</option>
             <option value="large">大</option>
+        </select>
+        <br>
+        <br>
+        <label for="activation-mode" style="display: inline-block; width: 300px;">リンクプレビューの動作条件:</label>
+        <select id="activation-mode" style="display: inline-block;">
+            <option value="always">補助キー関係なく動作</option>
+            <option value="withKey">補助キーを押しているときだけ動作</option>
+            <option value="withoutKey">補助キーを押していないときだけ動作</option>
+        </select>
+        <br>
+        <br>
+        <label for="activation-key" style="display: inline-block; width: 300px;">補助キー:</label>
+        <select id="activation-key" style="display: inline-block;">
+            <option value="Shift">Shiftキー</option>
+            <option value="Ctrl">Ctrlキー</option>
+            <option value="Alt">Altキー</option>
         </select>
         <br>
         <br>

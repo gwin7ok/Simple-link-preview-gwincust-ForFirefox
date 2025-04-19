@@ -49,6 +49,16 @@ const SETTINGS = {
             "adf.ly"
         ],
         value: null
+    },
+    activationMode: {
+        default: "always", // "always", "withKey", "withoutKey" のいずれか
+        elementId: "activation-mode",
+        value: null
+    },
+    activationKey: {
+        default: "Shift", // "Shift", "Ctrl", "Alt" のいずれか
+        elementId: "activation-key",
+        value: null
     }
 };
 

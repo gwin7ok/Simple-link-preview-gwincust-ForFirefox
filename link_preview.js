@@ -25,6 +25,21 @@ let preview_icon;
 // マウスオーバー時の処理
 function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
+
+    const activationMode = SETTINGS.activationMode.value || SETTINGS.activationMode.default;
+    const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
+
+    const isKeyPressed = event.getModifierState(activationKey);
+
+    // 動作条件を判定
+    if (
+        (activationMode === "withKey" && !isKeyPressed) || // 補助キーを押していないときは動作しない
+        (activationMode === "withoutKey" && isKeyPressed)  // 補助キーを押しているときは動作しない
+    ) {
+        debugLog(`補助キー条件に一致しないため動作しません: activationMode=${activationMode}, activationKey=${activationKey}`);
+        return;
+    }
+
     preview_frame._onLinkMouseOver(event);
 }
 
