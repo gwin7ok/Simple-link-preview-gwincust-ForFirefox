@@ -22,24 +22,50 @@ debugLog("link_preview.js is loaded");
 let preview_frame;
 let preview_icon;
 
+// グローバル変数で補助キーの押下状態を管理
+let isModifierKeyPressed = false;
+
+// 動作条件を満たしているかを判定する関数
+function isActivationConditionMet(event) {
+    const activationMode = SETTINGS.activationMode.value || SETTINGS.activationMode.default;
+    const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
+
+    // 動作条件を判定
+    if (
+        (activationMode === "withKey" && !isModifierKeyPressed) || // 補助キーを押していないときは動作しない
+        (activationMode === "withoutKey" && isModifierKeyPressed)  // 補助キーを押しているときは動作しない
+    ) {
+        debugLog(`動作条件を満たしていません: activationMode=${activationMode}, activationKey=${activationKey}, 補助キーの押下状態=${isModifierKeyPressed}`);
+        return false;
+    }
+
+    debugLog(`動作条件を満たしています: activationMode=${activationMode}, activationKey=${activationKey}, 補助キーの押下状態=${isModifierKeyPressed}`);
+    return true;
+}
+
 // マウスオーバー時の処理
 function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
 
-    const activationMode = SETTINGS.activationMode.value || SETTINGS.activationMode.default;
-    const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
-
-    const isKeyPressed = event.getModifierState(activationKey);
-
-    // 動作条件を判定
-    if (
-        (activationMode === "withKey" && !isKeyPressed) || // 補助キーを押していないときは動作しない
-        (activationMode === "withoutKey" && isKeyPressed)  // 補助キーを押しているときは動作しない
-    ) {
-        debugLog(`補助キー条件に一致しないため動作しません: activationMode=${activationMode}, activationKey=${activationKey}`);
+    // マウスオーバーした要素がリンクでない場合は処理をスキップ
+    const linkElement = event.target.closest('a');
+    if (!linkElement || !linkElement.href) {
+        debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
+        preview_frame._setPreviewState({ currentHoveredUrl: null });
         return;
     }
 
+    // 現在のマウスオーバーURLを常に更新
+    const url = linkElement.href;
+    preview_frame._setPreviewState({ currentHoveredUrl: url });
+    debugLog("currentHoveredUrl を更新しました:", url);
+
+    // 動作条件を満たしていない場合は処理をスキップ
+    if (!isActivationConditionMet(event)) {
+        return;
+    }
+
+    // 動作条件を満たしている場合のみプレビューを開始
     preview_frame._onLinkMouseOver(event);
 }
 
@@ -838,6 +864,9 @@ function initializePreviewInstances() {
         // マウスイベントリスナーを登録
         document.addEventListener('mouseover', on_link_mouseover_doc);
         document.addEventListener('mouseout', on_link_mouseout_doc);
+        // 補助キーの押下状態が変化したキーイベントリスナーを追加
+        document.addEventListener("keydown", handleKeyEvent);
+        document.addEventListener("keyup", handleKeyEvent);
     }
 }
 
@@ -854,6 +883,8 @@ function destroyPreviewInstances() {
     // マウスイベントリスナーを削除
     document.removeEventListener('mouseover', on_link_mouseover_doc);
     document.removeEventListener('mouseout', on_link_mouseout_doc);
+    document.removeEventListener("keydown", handleKeyEvent);
+    document.removeEventListener("keyup", handleKeyEvent);
 
 }
 
@@ -940,6 +971,38 @@ async function initialize() {
             initializePreviewInstances();
         }
     });
+
+}
+
+// 補助キーのdownupイベントを処理する関数
+function handleKeyEvent(event) {
+    const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
+
+    // 押されたキーが設定された補助キーでない場合はスキップ
+    if (event.key !== activationKey) return;
+
+    // 押下状態が変化していない場合は処理をスキップ
+    const isKeyDown = event.type === "keydown";
+    if (isModifierKeyPressed === isKeyDown) return;
+    debugLog(`補助キーの押下状態が変化しました: ${activationKey},押下状態: ${isKeyDown}`);
+
+    // 押下状態を更新
+    isModifierKeyPressed = isKeyDown;
+    debugLog(`isModifierKeyPressedを更新: ${isModifierKeyPressed},押下状態: ${isKeyDown}`);
+
+        // 動作条件を再判定し、現在のURLでプレビューを開始
+        const currentHoveredUrl = preview_frame?.previewState?.currentHoveredUrl;
+        if (currentHoveredUrl && isActivationConditionMet(event)) {
+            debugLog("現在のURLでプレビューを開始します:", currentHoveredUrl);
+
+            // 現在のURLを基に on_link_mouseover_doc を呼び出す
+            const mockEvent = {
+                target: {
+                    closest: () => ({ href: currentHoveredUrl })
+                }
+            };
+            on_link_mouseover_doc(mockEvent);
+        }
 }
 
 // 初期化関数を呼び出す
