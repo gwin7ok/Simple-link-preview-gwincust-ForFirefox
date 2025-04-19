@@ -44,36 +44,6 @@ function on_link_mouseout_doc(event) {
 }
 
 // メッセージリスナーを追加
-browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-    try {
-        switch (message.action) {
-            case "updatePreviewEnabled":
-                debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
-                await loadSettings(); // 設定をロード
-                SETTINGS.previewEnabled.value = message.enabled;
-                debugLog("プレビュー機能の状態が更新されました:", message.enabled);
-
-                // プレビュー機能がOFFの場合、表示中のプレビューを非表示にする
-                if (!message.enabled && preview_frame.display) {
-                    preview_frame._hide();
-                }
-
-                // レスポンスを返す
-                sendResponse({ success: true });
-                break;
-
-            default:
-                debugLog("未対応のメッセージアクション:", message.action);
-                sendResponse({ success: false, error: "Unsupported action" });
-        }
-    } catch (error) {
-        debugLog("onMessage リスナー内でエラーが発生しました:", error);
-        sendResponse({ success: false, error: error.message });
-    }
-
-    // 非同期処理が完了するまで待機することを示す
-    return true;
-});
 
 // PreviewFrame クラス
 class PreviewFrame {
@@ -180,19 +150,19 @@ class PreviewFrame {
             return `https://www.youtube.com/embed/${liveVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
 
-/*  shorts動画は45秒で再生が止まる問題がないので通常のURL開く        
-        // YouTube Shorts URLを埋め込み型に変換
-        const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
-        if (shortsUrlMatch) {
-            const shortsVideoId = shortsUrlMatch[1];
-            debugLog("YouTube Shorts動画IDを検出しました:", shortsVideoId);
-
-            // autoplay=1 を追加するかどうかを制御
-            const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
-
-            return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
-        }
-*/
+        /*  shorts動画は45秒で再生が止まる問題がないので通常のURL開く        
+                // YouTube Shorts URLを埋め込み型に変換
+                const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
+                if (shortsUrlMatch) {
+                    const shortsVideoId = shortsUrlMatch[1];
+                    debugLog("YouTube Shorts動画IDを検出しました:", shortsVideoId);
+        
+                    // autoplay=1 を追加するかどうかを制御
+                    const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
+        
+                    return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
+                }
+        */
         return null; // YouTube URLでない場合は null を返す
     }
 
@@ -214,11 +184,11 @@ class PreviewFrame {
             debugLog("展開されたURL:", url);
         }
 
-    // 直前のURLと同じ場合は何もしない
-    if (this.previewState.lastHoveredUrl === url) {
-        debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
-        return;
-    }
+        // 直前のURLと同じ場合は何もしない
+        if (this.previewState.lastHoveredUrl === url) {
+            debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
+            return;
+        }
 
         // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
@@ -746,97 +716,10 @@ class PreviewIcon {
     }
 }
 
-// 非同期関数を作成
-async function initialize() {
-    await loadSettings().then(() => {
-        debugLog("設定がロードされました:", SETTINGS);
-        initializePreviewSettings(); // 独自の初期化処理を実行
-        updatePreviewSettings(); // プレビュー設定を更新
-    });
 
 
-    // 設定が変更されたときに再読み込み
-    browser.storage.onChanged.addListener(async (changes, area) => {
-        if (area === "local") {
-            await loadSettings().then(() => {
-                updatePreviewSettings(); // SETTINGS変数が変更された際の処理を実行
-            });
 
-            // プレビュー機能がOFFに切り替えられた場合、プレビュー画面を非表示にする
-            /*            if (changes["previewEnabled"] && changes["previewEnabled"].newValue === false) {
-                            if (preview_frame.display) {
-                                preview_frame._hide(); // タイマーを使わずに即座に非表示にする
-                                debugLog("プレビュー機能がOFFに切り替えられたため、プレビュー画面を非表示にしました");
-                            }
-                        }
-            */
-            // 変更された設定値を1つのオブジェクトにまとめる
-            const changedSettings = {};
-            for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
-                changedSettings[key] = { oldValue, newValue };
-            }
 
-            // まとめてメッセージを送信
-            browser.runtime.sendMessage({
-                action: "settingsChanged",
-                changes: changedSettings
-            }).catch((error) => {
-                debugLog("メッセージ送信中にエラーが発生しました:", error);
-            });
-        }
-    });
-}
-
-// 初期化関数を呼び出す
-initialize();
-
-// ページロード時の初期化処理をまとめた関数
-async function initializePreviewSettings() {
-    // preview_frame と preview_icon のインスタンスを初期化
-    preview_frame = new PreviewFrame();
-    preview_icon = new PreviewIcon();
-
-}
-
-// SETTINGS変数が更新されたときの更新処理をまとめた関数(ページロード時も実行)
-async function updatePreviewSettings() {
-    // タイマーのタイムアウト値を更新
-    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
-    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
-    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
-    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
-    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
-
-    // プレビューウィンドウの幅を再設定
-    if (preview_frame.frame) {
-        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
-    }
-
-    // プレビューウィンドウが表示されている場合、右マージンを更新
-    if (preview_frame.display) {
-        preview_frame._applyRightMargin(); // _applyRightMargin を呼び出す
-    }
-
-    // アイコンを再生成（デバッグモードの変更を反映するため）
-    if (preview_icon.icon) {
-        document.body.removeChild(preview_icon.icon);
-        preview_icon.icon = preview_icon.build_icon();
-    }
-
-    // アイコンの大きさを更新
-    preview_icon.updateIconSize();
-
-    debugLog("プレビュー設定が反映されました:", SETTINGS);
-}
-
-if (SETTINGS.previewEnabled.value === undefined) {
-    SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
-    browser.storage.local.set({ "previewEnabled": SETTINGS.previewEnabled.default });
-}
-
-// イベントリスナーを追加
-document.addEventListener('mouseover', on_link_mouseover_doc);
-document.addEventListener('mouseout', on_link_mouseout_doc);
 
 // 短縮URLを展開する関数
 async function resolveShortenedUrl(shortUrl) {
@@ -888,25 +771,155 @@ async function resolveShortenedUrl(shortUrl) {
     });
 }
 
-/* resolveShortenedUrl() の実装により、バックグラウンドでのURL展開をが必要なくなったため、以下のコードはコメントアウトしています。
-// 短縮URLをバックグラウンドで展開する関数
-async function resolveShortenedUrlViaBackground(shortUrl) {
-    try {
-        const response = await browser.runtime.sendMessage({
-            type: 'resolveUrl',
-            url: shortUrl,
-        });
+// SETTINGS変数が更新されたときの更新処理をまとめた関数(ページロード時も実行)
+async function updatePreviewSettings() {
+    // タイマーのタイムアウト値を更新
+    preview_icon.show_timer.updateTimeout(SETTINGS.iconDisplayDelay.value);
+    preview_icon.hide_timer.updateTimeout(SETTINGS.iconDisplayTime.value);
+    preview_frame.show_timer.updateTimeout(SETTINGS.frameDisplayDelay.value);
+    preview_frame.hide_timer.updateTimeout(SETTINGS.frameDisplayTime.value);
+    preview_frame.update_timer.updateTimeout(SETTINGS.frameUpdateTime.value);
 
-        if (response && response.success) {
-            debugLog("バックグラウンドで展開されたURL:", response.resolvedUrl);
-            return response.resolvedUrl;
-        } else {
-            debugLog("バックグラウンドでのURL展開に失敗しました。元のURLを返します:", shortUrl);
-            return shortUrl;
-        }
-    } catch (error) {
-        console.error("resolveShortenedUrlViaBackground 内でエラーが発生しました:", error);
-        return shortUrl; // エラーが発生した場合は元のURLを返す
+    // プレビューウィンドウの幅を再設定
+    if (preview_frame.frame) {
+        preview_frame.frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
+    }
+
+    // プレビューウィンドウが表示されている場合、右マージンを更新
+    if (preview_frame.display) {
+        preview_frame._applyRightMargin(); // _applyRightMargin を呼び出す
+    }
+
+    // アイコンを再生成（デバッグモードの変更を反映するため）
+    if (preview_icon.icon) {
+        document.body.removeChild(preview_icon.icon);
+        preview_icon.icon = preview_icon.build_icon();
+    }
+
+    // アイコンの大きさを更新
+    preview_icon.updateIconSize();
+
+    debugLog("プレビュー設定が反映されました:", SETTINGS);
+}
+
+
+
+// プレビューインスタンスを初期化する関数
+function initializePreviewInstances() {
+
+    if (SETTINGS.previewEnabled.value) {
+        debugLog("PreviewFrame と PreviewIcon のインスタンスを作成します");
+        preview_frame = new PreviewFrame();
+        preview_icon = new PreviewIcon();
+
+        updatePreviewSettings(); // プレビュー設定を更新
+
+        // マウスイベントリスナーを登録
+        document.addEventListener('mouseover', on_link_mouseover_doc);
+        document.addEventListener('mouseout', on_link_mouseout_doc);
     }
 }
-*/
+
+// プレビューインスタンスを削除する関数
+function destroyPreviewInstances() {
+    if (preview_frame) {
+        preview_frame._hide();
+        preview_frame = null;
+    }
+    if (preview_icon) {
+        preview_icon.hide();
+        preview_icon = null;
+    }
+    // マウスイベントリスナーを削除
+    document.removeEventListener('mouseover', on_link_mouseover_doc);
+    document.removeEventListener('mouseout', on_link_mouseout_doc);
+
+}
+
+
+
+async function initialize() {
+    await loadSettings().then(() => {
+        debugLog("設定がロードされました:", SETTINGS);
+        // プレビュー機能ONOFFフラグが未定義の場合、デフォルト値を設定
+        if (SETTINGS.previewEnabled.value === undefined) {
+            SETTINGS.previewEnabled.value = SETTINGS.previewEnabled.default;
+            browser.storage.local.set({ "previewEnabled": SETTINGS.previewEnabled.default });
+        }
+        initializePreviewInstances(); // プレビューインスタンスを初期化
+    });
+
+    // メッセージリスナーを追加
+    browser.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+        try {
+            switch (message.action) {
+                case "updatePreviewEnabled":
+                    debugLog("updatePreviewEnabled メッセージを受信しました:", message.enabled);
+                    await loadSettings(); // 設定をロード
+                    SETTINGS.previewEnabled.value = message.enabled;
+                    debugLog("プレビュー機能の状態が更新されました:", message.enabled);
+
+                    if (message.enabled) {
+                        // プレビュー機能がONの場合
+                        debugLog("プレビュー機能がONになりました。インスタンスを作成します。");
+                        initializePreviewInstances();
+                    } else {
+                        // プレビュー機能がOFFの場合
+                        debugLog("プレビュー機能がOFFになりました。インスタンスを削除します。");
+                        destroyPreviewInstances();
+                    }
+
+                    // レスポンスを返す
+                    sendResponse({ success: true });
+                    break;
+
+                default:
+                    debugLog("未対応のメッセージアクション:", message.action);
+                    sendResponse({ success: false, error: "Unsupported action" });
+            }
+        } catch (error) {
+            debugLog("onMessage リスナー内でエラーが発生しました:", error);
+            sendResponse({ success: false, error: error.message });
+        }
+
+        // 非同期処理が完了するまで待機することを示す
+        return true;
+    });
+
+    // 設定が変更されたときに再読み込み
+    browser.storage.onChanged.addListener(async (changes, area) => {
+        if (area === "local") {
+            await loadSettings().then(() => {
+                updatePreviewSettings();
+
+                // 変更された設定値を1つのオブジェクトにまとめる
+                const changedSettings = {};
+                for (const [key, { oldValue, newValue }] of Object.entries(changes)) {
+                    changedSettings[key] = { oldValue, newValue };
+                }
+
+                // まとめてメッセージを送信
+                browser.runtime.sendMessage({
+                    action: "settingsChanged",
+                    changes: changedSettings
+                }).catch((error) => {
+                    debugLog("メッセージ送信中にエラーが発生しました:", error);
+                });
+            });
+        }
+    });
+
+    // ページが更新されたときにプレビューインスタンスを再初期化
+    window.addEventListener("pageshow", (event) => {
+        if (event.persisted) { // ページがキャッシュから復元された場合
+            debugLog("ページがキャッシュから復元されました。プレビューインスタンスを再初期化します。");
+            initializePreviewInstances();
+        } else {
+            debugLog("ページが通常のロードで表示されました。プレビューインスタンスを再初期化します。");
+            initializePreviewInstances();
+        }
+    });
+}
+
+// 初期化関数を呼び出す
+initialize();
