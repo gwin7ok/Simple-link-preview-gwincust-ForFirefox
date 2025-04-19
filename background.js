@@ -29,6 +29,27 @@ browser.runtime.onStartup.addListener(async () => {
     updateIcon(previewEnabled); // 起動時にアイコンを更新
 });
 
+// アドオンがインストールまたは更新されたときの処理
+browser.runtime.onInstalled.addListener((details) => {
+    if (details.reason === "install") {
+        console.log("アドオンがインストールされました。初期設定を適用します。");
+
+        // 初期設定を適用
+        initializeSettings().then(() => {
+            const previewEnabled = SETTINGS.previewEnabled.value ?? SETTINGS.previewEnabled.default;
+            updateIcon(previewEnabled); // アイコンを初期化
+        });
+    } else if (details.reason === "update") {
+        console.log("アドオンが更新されました。必要に応じて設定を更新します。");
+
+        // 必要に応じて更新処理を実行
+        initializeSettings().then(() => {
+            const previewEnabled = SETTINGS.previewEnabled.value ?? SETTINGS.previewEnabled.default;
+            updateIcon(previewEnabled); // アイコンを更新
+        });
+    }
+});
+
 // プレビュー機能の状態を切り替える関数
 async function togglePreviewEnabled() {
     await initializeSettings(); // SETTINGS を最新状態に更新
