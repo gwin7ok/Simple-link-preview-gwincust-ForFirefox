@@ -86,7 +86,8 @@ class PreviewFrame {
         this.previewState = {
             currentHoveredUrl: null, // 現在マウスオーバーしているURL
             pendingUrl: null, // 更新タイマーがスタートする時点でのURL
-            previewShowPageUrl: null // プレビュー画面が表示しているURL（埋め込みURLに変換前）
+            previewShowPageUrl: null, // プレビュー画面が表示しているURL（埋め込みURLに変換前）
+            lastHoveredUrl: null // 直前にマウスオーバーしたURL
         };
 
         // プレビューのロック状態
@@ -102,10 +103,11 @@ class PreviewFrame {
     }
 
     // previewState のプロパティを設定するメソッド
-    _setPreviewState({ currentHoveredUrl = null, pendingUrl = null, previewShowPageUrl = null } = {}) {
+    _setPreviewState({ currentHoveredUrl = null, pendingUrl = null, previewShowPageUrl = null, lastHoveredUrl = null } = {}) {
         if (currentHoveredUrl !== null) this.previewState.currentHoveredUrl = currentHoveredUrl;
         if (pendingUrl !== null) this.previewState.pendingUrl = pendingUrl;
         if (previewShowPageUrl !== null) this.previewState.previewShowPageUrl = previewShowPageUrl;
+        if (lastHoveredUrl !== null) this.previewState.lastHoveredUrl = lastHoveredUrl;
     }
 
     // 更新タイマー経過前後でマウスオーバーしているURLに変更がないかをチェック
@@ -212,6 +214,12 @@ class PreviewFrame {
             debugLog("展開されたURL:", url);
         }
 
+    // 直前のURLと同じ場合は何もしない
+    if (this.previewState.lastHoveredUrl === url) {
+        debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
+        return;
+    }
+
         // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
             debugLog("この URL はフィルタリストに一致するため、currentHoveredUrl をリセットします:", url);
@@ -220,6 +228,7 @@ class PreviewFrame {
         }
 
         // 以降の処理を実行
+        this._setPreviewState({ lastHoveredUrl: url }); // 直前のURLを更新
         this._setPreviewState({ currentHoveredUrl: url });
         debugLog("currentHoveredUrl を更新しました:", this.previewState.currentHoveredUrl);
 
