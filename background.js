@@ -110,6 +110,8 @@ browser.webRequest.onBeforeRedirect.addListener(
     ["responseHeaders"]
 );
 
+
+/* resolveShortenedUrl関数の実装によりbackgroundで短縮URLを展開してメッセージで返す必要がなくなったのでコメントアウト
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.type === 'resolveUrl') {
         fetch(message.url, { method: 'HEAD', redirect: 'follow' })
@@ -124,3 +126,4 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true; // 非同期レスポンスを示す
     }
 });
+*/

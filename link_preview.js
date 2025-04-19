@@ -252,8 +252,9 @@ class PreviewFrame {
         debugLog("プレビューを表示します:", url);
 
         // 短縮URLをバックグラウンドで展開
-        const resolvedUrl = await resolveShortenedUrlViaBackground(url);
-        debugLog("展開されたURL:", resolvedUrl);
+        //        const resolvedUrl = await resolveShortenedUrl(url);
+        //        debugLog("展開されたURL:", resolvedUrl);
+        const resolvedUrl = url; // 短縮URLの展開をスキップ
 
         // YouTubeのURLを埋め込みURLに変換
         const embedUrl = this._handleYouTubeUrl(resolvedUrl);
@@ -265,27 +266,29 @@ class PreviewFrame {
 
         this._setPreviewState({ previewShowPageUrl: finalUrl }); // プレビュー画面に表示するURLを格納
 
-        // メッセージリスナーを設定
-        const messageHandler = (event) => {
-            // メッセージの種類を確認
-            if (event.data.type === "iframeUrl") {
-                const openedUrl = event.data.url;
-                debugLog("iframe 内で実際に開かれているURL:", openedUrl);
-
-                // 実際のURLを_handleYouTubeUrlでチェック
-                const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
-                if (newEmbedUrl) {
-                    debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
-                    this._show(newEmbedUrl); // 再コール
-                }
-
-                // メッセージリスナーを削除
-                window.removeEventListener("message", messageHandler);
-            }
-        };
-
-        // メッセージリスナーを追加
-        window.addEventListener("message", messageHandler);
+        /*  //resolveShortenedUrl() の実装により、iframe にスクリプトを挿入して開いているページのURLを送信する必要がなくなったため、以下のコードはコメントアウトしています。
+                // メッセージリスナーを設定
+                const messageHandler = (event) => {
+                    // メッセージの種類を確認
+                    if (event.data.type === "iframeUrl") {
+                        const openedUrl = event.data.url;
+                        debugLog("iframe 内で実際に開かれているURL:", openedUrl);
+        
+                        // 実際のURLを_handleYouTubeUrlでチェック
+                        const newEmbedUrl = this._handleYouTubeUrl(openedUrl);
+                        if (newEmbedUrl) {
+                            debugLog("埋め込み型のYouTube URLに変換して再度プレビューを表示します:", newEmbedUrl);
+                            this._show(newEmbedUrl); // 再コール
+                        }
+        
+                        // メッセージリスナーを削除
+                        window.removeEventListener("message", messageHandler);
+                    }
+                };
+        
+                // メッセージリスナーを追加
+                window.addEventListener("message", messageHandler);
+        */
     }
 
     // プレビューを非表示
@@ -398,6 +401,7 @@ class PreviewFrame {
         // プレビューウィンドウの幅を設定
         frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
 
+        /* resolveShortenedUrl() の実装により、iframe にスクリプトを挿入して開いているページのURLを送信する必要がなくなったため、以下のコードはコメントアウトしています。
         // iframe の onload イベントを設定
         const iframe = frame.querySelector('#lprv_content');
         iframe.onload = () => {
@@ -422,6 +426,8 @@ class PreviewFrame {
                 console.error("iframe のスクリプト挿入中にエラーが発生しました:", error);
             }
         };
+*/
+
 
         frame.querySelector('#back').addEventListener("click", this._on_nav_back_click.bind(this));
         frame.querySelector('#forward').addEventListener("click", this._on_nav_forward_click.bind(this));
@@ -797,34 +803,56 @@ document.addEventListener('mouseout', on_link_mouseout_doc);
 
 // 短縮URLを展開する関数
 async function resolveShortenedUrl(shortUrl) {
-    try {
-        // まずは HEAD リクエストで試す
-        let response = await fetch(shortUrl, {
-            method: 'HEAD',
-            mode: 'cors',
-            redirect: 'follow',
-        });
-
-        return response.url;
-    } catch (headError) {
-        console.warn('HEADリクエスト失敗。GETで再試行:', shortUrl);
+    return new Promise((resolve) => {
+        const req = new XMLHttpRequest();
+        req.onreadystatechange = () => {
+            if (req.readyState === 4) {
+                const contentType = req.getResponseHeader("Content-Type");
+                if (contentType === null) {
+                    console.warn("展開できません:", shortUrl);
+                    resolve(shortUrl);
+                } else if (!/text\/html/.test(contentType)) {
+                    if (/image\//.test(contentType)) {
+                        console.log("画像です:", shortUrl);
+                        resolve(shortUrl);
+                    } else if (/json/.test(contentType)) {
+                        console.log("JSONです:", shortUrl);
+                        resolve(shortUrl);
+                    } else {
+                        console.log(contentType + " 形式のデータです:", shortUrl);
+                        resolve(shortUrl);
+                    }
+                } else if (req.status === 304 || req.status === 200) {
+                    // レスポンスボディからURLを抽出
+                    const responseText = req.responseText;
+                    const urlMatch = responseText.match(/https?:\/\/[\w/:%#\$&\?\(\)~\.=\+\-]+/g);
+                    if (urlMatch && urlMatch.length > 0) {
+                        const finalUrl = urlMatch[0]; // 最初にマッチしたURLを使用
+                        debugLog("展開されたURL(resolveShortenedUrl):", finalUrl);
+                        resolve(finalUrl);
+                    } else {
+                        console.warn("レスポンスからURLを抽出できませんでした:", shortUrl);
+                        resolve(shortUrl);
+                    }
+                } else {
+                    console.warn("展開できません:", shortUrl);
+                    resolve(shortUrl);
+                }
+            }
+        };
 
         try {
-            // HEAD が CORS で弾かれたら GET で再試行
-            let response = await fetch(shortUrl, {
-                method: 'GET',
-                mode: 'cors',
-                redirect: 'follow',
-            });
-
-            return response.url;
-        } catch (getError) {
-            console.warn('GETリクエストも失敗:', shortUrl, getError);
-            return shortUrl;
+            req.open('GET', shortUrl, true);
+            req.send();
+        } catch (error) {
+            console.error("リクエスト中にエラーが発生しました:", error);
+            resolve(shortUrl);
         }
-    }
+    });
 }
 
+/* resolveShortenedUrl() の実装により、バックグラウンドでのURL展開をが必要なくなったため、以下のコードはコメントアウトしています。
+// 短縮URLをバックグラウンドで展開する関数
 async function resolveShortenedUrlViaBackground(shortUrl) {
     try {
         const response = await browser.runtime.sendMessage({
@@ -844,3 +872,4 @@ async function resolveShortenedUrlViaBackground(shortUrl) {
         return shortUrl; // エラーが発生した場合は元のURLを返す
     }
 }
+*/
