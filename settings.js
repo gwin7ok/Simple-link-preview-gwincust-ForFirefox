@@ -56,7 +56,7 @@ const SETTINGS = {
         value: null
     },
     activationKey: {
-        default: "Shift", // "Shift", "Ctrl", "Alt" のいずれか
+        default: "Shift", // "Shift", "Control"のいずれか
         elementId: "activation-key",
         value: null
     }

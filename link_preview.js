@@ -77,6 +77,7 @@ function on_link_mouseout_doc(event) {
     }
 
     if (event.target.nodeName === 'A') {
+        debugLog("マウスアウトしたのでcurrentHoverUrlを消去:", preview_frame.previewState.currentHoveredUrl);
         preview_frame._setPreviewState({ currentHoveredUrl: null }); // マウスアウト時に現在のURLをリセット
         if (preview_frame.display) {
             preview_frame.hide();
@@ -836,6 +837,7 @@ function destroyPreviewInstances() {
     document.removeEventListener('mouseout', on_link_mouseout_doc);
     document.removeEventListener("keydown", handleKeyEvent);
     document.removeEventListener("keyup", handleKeyEvent);
+    debugLog("マウスオーバーとキー押下イベントリスナーが削除された");
 
 }
 
@@ -927,6 +929,7 @@ async function initialize() {
 
 // 補助キーのdownupイベントを処理する関数
 function handleKeyEvent(event) {
+    console.log("handleKeyEventが呼び出されました:", `${event.type}, ${event.key}`);
     const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
 
     // 押されたキーが設定された補助キーでない場合はスキップ
