@@ -50,6 +50,38 @@ browser.runtime.onInstalled.addListener((details) => {
     }
 });
 
+// フォーカス状態を確認するメッセージハンドラ
+browser.runtime.onMessage.addListener((message, sender) => {
+  if (message.type === "checkWindowFocus") {
+    console.log("checkWindowFocus メッセージを受信しました。");
+    
+    // タブIDを記録
+    const tabId = sender.tab.id;
+    
+    // ウィンドウ状態を確認して応答を返す
+    browser.windows.getCurrent()
+      .then(win => {
+        // 取得したウィンドウ状態をタブに送り返す
+        debugLog("windowsFocusResponseでメッセージ送信します focused:", win.focused);
+        return browser.tabs.sendMessage(tabId, {
+          type: "windowFocusResponse",
+          focused: win.focused
+        });
+      })
+      .catch(err => {
+        console.error("windows.getCurrent エラー:", err);
+        return browser.tabs.sendMessage(tabId, {
+          type: "windowFocusResponse",
+          focused: false,
+          error: err.message
+        });
+      });
+    
+    // リスナーは応答を返さない（別のメッセージで対応）
+    return false;
+  }
+});
+
 // プレビュー機能の状態を切り替える関数
 async function togglePreviewEnabled() {
     await initializeSettings(); // SETTINGS を最新状態に更新

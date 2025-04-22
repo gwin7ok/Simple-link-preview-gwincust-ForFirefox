@@ -25,6 +25,85 @@ let preview_icon;
 // グローバル変数で補助キーの押下状態を管理
 let isModifierKeyPressed = false;
 
+// フォーカス状態を管理するシンプルなユーティリティ
+const FocusManager = {
+    isWindowActive: true, // ウィンドウがアクティブかどうかのフラグ
+
+    // フォーカス状態を確認して更新（Promise ベースのアプローチ）
+    checkFocusState() {
+        return new Promise((resolve) => {
+            console.log("[link_preview.js] checkFocusState() を呼び出しました。");
+
+            // バックグラウンドからの応答を受け取るリスナー
+            const responseHandler = (message) => {
+                if (message.type === "windowFocusResponse") {
+                    debugLog("バックグラウンドからの応答を受信 focused:", message.focused);
+                    // リスナーを削除
+                    browser.runtime.onMessage.removeListener(responseHandler);
+
+                    // タイムアウトをクリア
+                    clearTimeout(timeoutId);
+
+                    // フォーカス状態を設定
+                    this.isWindowActive = message.focused;
+                    console.log("フォーカス状態取得成功:", this.isWindowActive);
+                    resolve(this.isWindowActive);
+                }
+            };
+
+            // リスナーを登録
+            browser.runtime.onMessage.addListener(responseHandler);
+
+            // タイムアウト処理
+            const timeoutId = setTimeout(() => {
+                debugLog("バックグラウンド応答のタイムアウト");
+                browser.runtime.onMessage.removeListener(responseHandler);
+                this.isWindowActive = document.hasFocus();
+                debugLog("フォーカス状態をdocument.hasFocus()で取得:", this.isWindowActive);
+                resolve(this.isWindowActive);
+            }, 1000);
+
+            // リクエストを送信
+            browser.runtime.sendMessage({ type: "checkWindowFocus" })
+                .then(result => {
+                    debugLog("バックグラウンドへのメッセージ送信:checkWindowFocus", result);
+                })
+                .catch(error => {
+                    debugLog("バックグラウンドへのメッセージ送信エラー:", error);
+                    clearTimeout(timeoutId);
+                    browser.runtime.onMessage.removeListener(responseHandler);
+                    this.isWindowActive = document.hasFocus();
+                    debugLog("フォーカス状態をdocument.hasFocus()で取得:", this.isWindowActive);
+                    resolve(this.isWindowActive);
+                });
+        });
+    },
+
+    // マウスオーバー時のフォーカス取得（Promise ベース）
+    recaptureFocusOnMouseOver() {
+        debugLog("FocusManager.recaptureFocusOnMouseOver();をコールしてマウスオーバー時にフォーカスを取り戻します");
+
+        return this.checkFocusState()
+            .then(isActive => {
+                // フォーカス状態チェックを省略、常にフォーカスを取り戻す
+                // マウスがプレビュー上にある場合は何もしない
+                if (preview_frame && preview_frame.frame.matches(':hover')) {
+                    debugLog("プレビュー上にマウスがあるため、フォーカスを取得しません");
+                    return false;
+                }
+
+                debugLog("リンクマウスオーバー時にフォーカスを取り戻します");
+                document.documentElement.focus({ preventScroll: true });
+                return true;
+            });
+    },
+
+    // フォーカス状態をリセット
+    resetFocusState() {
+        debugLog("フォーカス状態をリセットします");
+        this.isWindowActive = document.hasFocus();
+    }
+};
 // 動作条件を満たしているかを判定する関数
 function isActivationConditionMet(event) {
     const activationMode = SETTINGS.activationMode.value || SETTINGS.activationMode.default;
@@ -81,6 +160,11 @@ async function on_link_mouseover_doc(event) {
     const url = linkElement.href;
     await preview_frame._setPreviewState({ currentHoveredUrl: url });
     await debugLog("currentHoveredUrl を更新しました:", url);
+
+    // フォーカスを取り戻す
+    debugLog("FocusManager.recaptureFocusOnMouseOver();をコールしてマウスオーバー時にフォーカスを取り戻します");
+    FocusManager.recaptureFocusOnMouseOver();
+
 
     // 動作条件を満たしていない場合は処理をスキップ
     if (!isActivationConditionMet(event)) {
@@ -219,6 +303,7 @@ class PreviewFrame {
         /*  short動画は通常URLで読み込んでも45秒問題は発生しないが、
         キーイベントが取得できなくなる問題が発生するので埋め込みURLで読み込む   */
         // YouTube Shorts URLを埋め込み型に変換
+        /* フォーカスを取り戻す処理チェックで通常URLで読み込ませるのでコメントアウト
         const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
         if (shortsUrlMatch) {
             const shortsVideoId = shortsUrlMatch[1];
@@ -229,7 +314,7 @@ class PreviewFrame {
 
             return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
-        /* */
+         */
         return null; // YouTube URLでない場合は null を返す
     }
 
@@ -857,6 +942,7 @@ function initializePreviewInstances() {
         // youtubeプレーヤーのキーボード操作が効かなくなるのでOFF
         // youtubeの通常URL読み込み後にキーイベントが取得できなくなる現象は
         // youtubeの再生関連のURLはすべて埋め込みURLでプレビュー表示することで対応
+
     }
 }
 
@@ -967,11 +1053,14 @@ async function initialize() {
 
 // 補助キーのdownupイベントを処理する関数
 function handleKeyEvent(event) {
-    console.log("handleKeyEventが呼び出されました:", `${event.type}, ${event.key}`);
+    debugLog("handleKeyEventが呼び出されました:", `${event.type}, ${event.key}`);
     const activationKey = SETTINGS.activationKey.value || SETTINGS.activationKey.default;
 
     // 押されたキーが設定された補助キーでない場合はスキップ
-    if (event.key !== activationKey) return;
+    if (event.key !== activationKey) {
+        debugLog(`押されたキーが補助キーでないため、処理をスキップします: ${event.key}`);
+        return;
+    }
 
     // 押下状態が変化していない場合は処理をスキップ
     const isKeyDown = event.type === "keydown";
@@ -1034,3 +1123,4 @@ function monitorYoutubeInIframe() {
 
 // 初期化関数を呼び出す
 initialize();
+
