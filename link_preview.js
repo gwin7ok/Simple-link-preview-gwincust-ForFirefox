@@ -44,21 +44,22 @@ function isActivationConditionMet(event) {
 }
 
 // マウスオーバー時の処理
-function on_link_mouseover_doc(event) {
+async function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
 
     // マウスオーバーした要素がリンクでない場合は処理をスキップ
     const linkElement = event.target.closest('a');
+    await debugLog(`マウスオーバーした要素:event.target.nodeName=${event.target.nodeName}, linkElement=${linkElement}`,);
     if (!linkElement || !linkElement.href) {
-        debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
-        preview_frame._setPreviewState({ currentHoveredUrl: null });
+        await debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
+        await preview_frame._setPreviewState({ currentHoveredUrl: null });
         return;
     }
 
     // 現在のマウスオーバーURLを常に更新
     const url = linkElement.href;
-    preview_frame._setPreviewState({ currentHoveredUrl: url });
-    debugLog("currentHoveredUrl を更新しました:", url);
+    await preview_frame._setPreviewState({ currentHoveredUrl: url });
+    await debugLog("currentHoveredUrl を更新しました:", url);
 
     // 動作条件を満たしていない場合は処理をスキップ
     if (!isActivationConditionMet(event)) {
@@ -66,7 +67,7 @@ function on_link_mouseover_doc(event) {
     }
 
     // 動作条件を満たしている場合のみプレビューを開始
-    preview_frame._onLinkMouseOver(event);
+    await preview_frame._onLinkMouseOver(event);
 }
 
 // マウスアウト時の処理
@@ -76,10 +77,12 @@ function on_link_mouseout_doc(event) {
         return;
     }
 
-    if (event.target.nodeName === 'A') {
+    // リンク要素または子要素からのマウスアウトを正確に検出
+    const linkElement = event.target.closest('a');
+    if (linkElement || event.target.nodeName === 'A') {
         debugLog("マウスアウトしたのでcurrentHoverUrlを消去:", preview_frame.previewState.currentHoveredUrl);
-        preview_frame._setPreviewState({ currentHoveredUrl: null }); // マウスアウト時に現在のURLをリセット
-        if (preview_frame.display) {
+        preview_frame._setPreviewState({ currentHoveredUrl: null });
+        if (preview_frame.display && !preview_frame.locked) {
             preview_frame.hide();
         }
     }
@@ -212,8 +215,8 @@ class PreviewFrame {
     async _onLinkMouseOver(event) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
-            debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
-            this._setPreviewState({ currentHoveredUrl: null });
+            await debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
+            await this._setPreviewState({ currentHoveredUrl: null });
             return;
         }
 
@@ -221,35 +224,35 @@ class PreviewFrame {
 
         // 短縮URLを展開
         if (this._isShortenedUrl(url)) {
-            debugLog("短縮URLを検出しました。展開を試みます:", url);
+            await debugLog("短縮URLを検出しました。展開を試みます:", url);
             url = await resolveShortenedUrl(url);
-            debugLog("展開されたURL:", url);
+            await debugLog("展開されたURL:", url);
         }
 
         // 直前のURLと同じ場合でかつアイコンが表示されているときは何もしない
         if (preview_icon.isVisible() && this.previewState.lastHoveredUrl === url) {
-            debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
+            await debugLog("同じURLにマウスオーバーしています。アイコンを再表示しません:", url);
             return;
         }
 
         // URLがフィルタリストに一致する場合は処理をスキップ
         if (this._shouldIgnoreUrl(url)) {
-            debugLog("この URL はフィルタリストに一致するため、currentHoveredUrl をリセットします:", url);
-            this._setPreviewState({ currentHoveredUrl: null });
+            await debugLog("この URL はフィルタリストに一致するため、currentHoveredUrl をリセットします:", url);
+            await this._setPreviewState({ currentHoveredUrl: null });
             return;
         }
 
         // 以降の処理を実行
-        this._setPreviewState({ lastHoveredUrl: url }); // 直前のURLを更新
-        this._setPreviewState({ currentHoveredUrl: url });
-        debugLog("currentHoveredUrl を更新しました:", this.previewState.currentHoveredUrl);
+        await this._setPreviewState({ lastHoveredUrl: url }); // 直前のURLを更新
+        await this._setPreviewState({ currentHoveredUrl: url });
+        await debugLog("currentHoveredUrl を更新しました:", this.previewState.currentHoveredUrl);
 
         // プレビュー画面が表示されている場合は更新処理を実行
         if (this.display) {
-            this.update(url);
+            await this.update(url);
         } else {
             // プレビュー画面が表示されていない場合はアイコンを表示
-            preview_icon.show(url, event.clientX, event.clientY);
+            await preview_icon.show(url, event.clientX, event.clientY);
         }
     }
 
@@ -937,26 +940,43 @@ function handleKeyEvent(event) {
 
     // 押下状態が変化していない場合は処理をスキップ
     const isKeyDown = event.type === "keydown";
-    if (isModifierKeyPressed === isKeyDown) return;
-    debugLog(`補助キーの押下状態が変化しました: ${activationKey},押下状態: ${isKeyDown}`);
+    if (isModifierKeyPressed === isKeyDown) {
+        debugLog(`補助キーの押下状態が変化なし: ${activationKey},押下状態: ${isKeyDown}`);
+        return;
+    } else {
+        debugLog(`補助キーの押下状態が変化しました: ${activationKey},押下状態: ${isKeyDown}`);
+    }
 
     // 押下状態を更新
     isModifierKeyPressed = isKeyDown;
     debugLog(`isModifierKeyPressedを更新: ${isModifierKeyPressed},押下状態: ${isKeyDown}`);
 
-        // 動作条件を再判定し、現在のURLでプレビューを開始
-        const currentHoveredUrl = preview_frame?.previewState?.currentHoveredUrl;
-        if (currentHoveredUrl && isActivationConditionMet(event)) {
-            debugLog("現在のURLでプレビューを開始します:", currentHoveredUrl);
-
-            // 現在のURLを基に on_link_mouseover_doc を呼び出す
-            const mockEvent = {
-                target: {
-                    closest: () => ({ href: currentHoveredUrl })
-                }
-            };
-            on_link_mouseover_doc(mockEvent);
-        }
+    // 実際にマウスが現在あるDOM要素を取得して確認
+    const elementUnderMouse = document.elementFromPoint(
+        preview_icon.mousePosition.x, 
+        preview_icon.mousePosition.y
+    );
+    
+    // 実際にマウスの下にあるリンク要素を確認
+    const actualLinkElement = elementUnderMouse ? elementUnderMouse.closest('a') : null;
+    
+    // マウス下に実際にリンク要素がある場合のみURLを使用
+    const actualUrl = actualLinkElement ? actualLinkElement.href : null;
+    
+    // 実際のURLが存在する場合のみそれを使用し、なければ処理中止
+    if (actualUrl && isActivationConditionMet(event)) {
+        debugLog("マウス位置の実際のURLでプレビューを開始します:", actualUrl);
+        
+        const realEvent = {
+            target: elementUnderMouse,
+            clientX: preview_icon.mousePosition.x,
+            clientY: preview_icon.mousePosition.y
+        };
+        
+        on_link_mouseover_doc(realEvent);
+    } else if (isActivationConditionMet(event)) {
+        debugLog("マウス位置にリンク要素がないため、プレビュー更新をスキップします");
+    }
 }
 
 // 初期化関数を呼び出す
