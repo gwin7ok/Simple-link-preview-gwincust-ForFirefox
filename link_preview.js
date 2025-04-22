@@ -216,19 +216,20 @@ class PreviewFrame {
             return `https://www.youtube.com/embed/${liveVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
         }
 
-        /*  shorts動画は45秒で再生が止まる問題がないので通常のURL開く        
-                // YouTube Shorts URLを埋め込み型に変換
-                const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
-                if (shortsUrlMatch) {
-                    const shortsVideoId = shortsUrlMatch[1];
-                    debugLog("YouTube Shorts動画IDを検出しました:", shortsVideoId);
-        
-                    // autoplay=1 を追加するかどうかを制御
-                    const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
-        
-                    return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
-                }
-        */
+        /*  short動画は通常URLで読み込んでも45秒問題は発生しないが、
+        キーイベントが取得できなくなる問題が発生するので埋め込みURLで読み込む   */
+        // YouTube Shorts URLを埋め込み型に変換
+        const shortsUrlMatch = url.match(/(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([\w-]+)/);
+        if (shortsUrlMatch) {
+            const shortsVideoId = shortsUrlMatch[1];
+            debugLog("YouTube Shorts動画IDを検出しました:", shortsVideoId);
+
+            // autoplay=1 を追加するかどうかを制御
+            const autoplayEnabled = SETTINGS.youtubeAutoplay.value ?? SETTINGS.youtubeAutoplay.default;
+
+            return `https://www.youtube.com/embed/${shortsVideoId}${autoplayEnabled ? "?autoplay=1" : ""}`;
+        }
+        /* */
         return null; // YouTube URLでない場合は null を返す
     }
 
@@ -331,6 +332,7 @@ class PreviewFrame {
 
         // YouTubeのURLを埋め込みURLに変換
         const embedUrl = this._handleYouTubeUrl(resolvedUrl);
+        //        const embedUrl = null; // YouTubeのURL変換をスキップ (テスト用)
         const finalUrl = embedUrl || resolvedUrl;
 
         // iframeのURLを更新
@@ -451,7 +453,7 @@ class PreviewFrame {
               <button class="lprv_btn" id="hide" title="Hide preview frame"></button>
             </div>
           </div>
-          <iframe id="lprv_content" sandbox="allow-scripts allow-same-origin"></iframe>
+          <iframe id="lprv_content" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
         `;
 
         // プレビューウィンドウの幅を設定
@@ -847,8 +849,14 @@ function initializePreviewInstances() {
         document.addEventListener('mouseover', on_link_mouseover_doc);
         document.addEventListener('mouseout', on_link_mouseout_doc);
         // 補助キーの押下状態が変化したキーイベントリスナーを追加
-        document.addEventListener("keydown", handleKeyEvent);
-        document.addEventListener("keyup", handleKeyEvent);
+        document.addEventListener("keydown", handleKeyEvent, true);
+        document.addEventListener("keyup", handleKeyEvent, true);
+
+        // YouTubeページのフォーカス状態を監視してフォーカスをタブに戻す関数
+        // monitorYoutubeInIframe();
+        // youtubeプレーヤーのキーボード操作が効かなくなるのでOFF
+        // youtubeの通常URL読み込み後にキーイベントが取得できなくなる現象は
+        // youtubeの再生関連のURLはすべて埋め込みURLでプレビュー表示することで対応
     }
 }
 
@@ -865,8 +873,8 @@ function destroyPreviewInstances() {
     // マウスイベントリスナーを削除
     document.removeEventListener('mouseover', on_link_mouseover_doc);
     document.removeEventListener('mouseout', on_link_mouseout_doc);
-    document.removeEventListener("keydown", handleKeyEvent);
-    document.removeEventListener("keyup", handleKeyEvent);
+    document.removeEventListener("keydown", handleKeyEvent, true);
+    document.removeEventListener("keyup", handleKeyEvent, true);
     debugLog("マウスオーバーとキー押下イベントリスナーが削除された");
 
 }
@@ -995,6 +1003,33 @@ function handleKeyEvent(event) {
     } else if (isActivationConditionMet(event)) {
         debugLog("マウス位置にリンク要素がないため、プレビュー更新をスキップします");
     }
+}
+
+// YouTubeページのフォーカス状態を監視して対応
+function monitorYoutubeInIframe() {
+    const observer = new MutationObserver((mutations) => {
+        // YouTubeのプレーヤーが見つかったらフォーカス制御を行う
+        if (preview_frame?.iframe?.contentDocument?.querySelector('#movie_player')) {
+            // フォーカスを親ウィンドウに戻す処理
+            window.focus();
+            document.body.focus();
+        }
+    });
+
+    // iframeのload後にオブザーバーを適用
+    preview_frame.iframe.addEventListener('load', () => {
+        try {
+            const doc = preview_frame.iframe.contentDocument;
+            if (doc && doc.body) {
+                observer.observe(doc.body, {
+                    childList: true,
+                    subtree: true
+                });
+            }
+        } catch (e) {
+            // クロスオリジンの場合はエラーになるので無視
+        }
+    });
 }
 
 // 初期化関数を呼び出す
