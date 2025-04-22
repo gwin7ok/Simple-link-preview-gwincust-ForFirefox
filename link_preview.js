@@ -43,6 +43,27 @@ function isActivationConditionMet(event) {
     return true;
 }
 
+// マウスポインタ位置にあるリンク要素とURLを取得する共通関数
+function getLinkUnderMouse() {
+    // マウスが現在ある位置のDOM要素を取得
+    const elementUnderMouse = document.elementFromPoint(
+        preview_icon?.mousePosition?.x || 0,
+        preview_icon?.mousePosition?.y || 0
+    );
+
+    // マウス下に実際にあるリンク要素を確認
+    const actualLinkElement = elementUnderMouse ? elementUnderMouse.closest('a') : null;
+
+    // リンク要素から実際のURLを取得
+    const actualUrl = actualLinkElement ? actualLinkElement.href : null;
+
+    return {
+        element: elementUnderMouse,
+        linkElement: actualLinkElement,
+        url: actualUrl
+    };
+}
+
 // マウスオーバー時の処理
 async function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
@@ -388,19 +409,25 @@ class PreviewFrame {
             return;
         }
 
+        // マウス位置の実際のリンクを確認
+        const { url: currentMouseUrl } = getLinkUnderMouse();
+
+        // マウス位置にリンクがない場合は更新しない
+        if (!currentMouseUrl) {
+            debugLog("マウスがリンク上にないため、更新をスキップします");
+            return;
+        }
+
         // 更新時間経過後にマウスオーバーしているURLと一致している場合のみ更新
         if (this._isPendingUrlSameAsCurrentHovered()) {
             debugLog("更新時間経過前後でマウスオーバーしているURLが一致しているのでプレビューを更新します:", url);
-
             this._show(url); // プレビューを表示
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
-            // currentHoveredUrl が有効な URL の場合、再度 update() を呼び出す
-            if (this.previewState.currentHoveredUrl) {
-                debugLog("マウスポインタが移動後にURLをマウスオーバーしているので再度更新を試みます:", this.previewState.currentHoveredUrl);
-                this.update(this.previewState.currentHoveredUrl);
-            }
+            // 現在のurlで、再度update()を呼び出す
+            debugLog("マウスポインタが移動後に新しいURLをマウスオーバーしているので再度更新を試みます:", url);
+            this.update(url);
         }
         this.hide(); // 更新後に非表示タイマーを開始
     }
@@ -951,28 +978,19 @@ function handleKeyEvent(event) {
     isModifierKeyPressed = isKeyDown;
     debugLog(`isModifierKeyPressedを更新: ${isModifierKeyPressed},押下状態: ${isKeyDown}`);
 
-    // 実際にマウスが現在あるDOM要素を取得して確認
-    const elementUnderMouse = document.elementFromPoint(
-        preview_icon.mousePosition.x, 
-        preview_icon.mousePosition.y
-    );
-    
-    // 実際にマウスの下にあるリンク要素を確認
-    const actualLinkElement = elementUnderMouse ? elementUnderMouse.closest('a') : null;
-    
-    // マウス下に実際にリンク要素がある場合のみURLを使用
-    const actualUrl = actualLinkElement ? actualLinkElement.href : null;
-    
+    // 共通関数を使用してマウス位置のリンクを取得
+    const { element, linkElement, url: actualUrl } = getLinkUnderMouse();
+
     // 実際のURLが存在する場合のみそれを使用し、なければ処理中止
     if (actualUrl && isActivationConditionMet(event)) {
         debugLog("マウス位置の実際のURLでプレビューを開始します:", actualUrl);
-        
+
         const realEvent = {
-            target: elementUnderMouse,
+            target: element,
             clientX: preview_icon.mousePosition.x,
             clientY: preview_icon.mousePosition.y
         };
-        
+
         on_link_mouseover_doc(realEvent);
     } else if (isActivationConditionMet(event)) {
         debugLog("マウス位置にリンク要素がないため、プレビュー更新をスキップします");
