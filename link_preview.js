@@ -85,7 +85,12 @@ const FocusManager = {
 
         return this.checkFocusState()
             .then(isActive => {
-                // フォーカス状態チェックを省略、常にフォーカスを取り戻す
+                // ウィンドウがフォーカスを持っていない場合は何もしない
+                if (!isActive) {
+                    debugLog("Firefoxウィンドウがフォーカスを持っていないため、フォーカスを取得しません");
+                    return false;
+                }
+                
                 // マウスがプレビュー上にある場合は何もしない
                 if (preview_frame && preview_frame.frame.matches(':hover')) {
                     debugLog("プレビュー上にマウスがあるため、フォーカスを取得しません");
