@@ -90,7 +90,7 @@ const FocusManager = {
                     debugLog("Firefoxウィンドウがフォーカスを持っていないため、フォーカスを取得しません");
                     return false;
                 }
-                
+
                 // マウスがプレビュー上にある場合は何もしない
                 if (preview_frame && preview_frame.frame.matches(':hover')) {
                     debugLog("プレビュー上にマウスがあるため、フォーカスを取得しません");
@@ -543,8 +543,8 @@ class PreviewFrame {
               <button class="lprv_btn" id="hide" title="Hide preview frame"></button>
             </div>
           </div>
-          <iframe id="lprv_content" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"></iframe>
-        `;
+          <iframe id="lprv_content"></iframe>
+         `;
 
         // プレビューウィンドウの幅を設定
         frame.style.width = `${SETTINGS.previewWidthPx.value}px`;
