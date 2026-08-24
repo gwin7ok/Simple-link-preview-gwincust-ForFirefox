@@ -9,13 +9,17 @@
   },
   "content_scripts": [
     {
-      "matches": ["<all_urls>"],
+      "matches": [
+        "<all_urls>"
+      ],
       "js": [
         "settings.js",
         "link_preview.js",
         "options.js"
       ],
-      "css": ["link_preview.css"]
+      "css": [
+        "link_preview.css"
+      ]
     }
   ],
   "background": {
@@ -26,14 +30,16 @@
     ],
     "persistent": false
   },
-  "web_accessible_resources": ["images/*.png", "images/*.svg"],
+  "web_accessible_resources": [
+    "images/*.png",
+    "images/*.svg"
+  ],
   "permissions": [
     "menus",
     "storage",
     "activeTab",
     "webRequest",
     "webRequestBlocking",
-    "windows",
     "<all_urls>"
   ],
   "browser_action": {
