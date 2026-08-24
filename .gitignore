@@ -1,1 +1,6 @@
 .git/
+node_modules/
+*.zip
+*.log
+Thumbs.db
+.DS_Store
