@@ -66,12 +66,26 @@
 
 ## インストール方法
 
-リポジトリにはビルド済みの XPI ファイル `simple-link-preview@gwin7ok.com.xpi` が含まれています。最も簡単なインストール方法は、以下の手順です：
+  リポジトリから [simple-link-preview@gwin7ok.com.xpi](https://github.com/gwin7ok/Simple-link-preview-gwincust-ForFirefox/raw/main/simple-link-preview@gwin7ok.com.xpi)をダウンロードして、以下の3つの方法のいずれかでインストールできます：
 
-1. リポジトリのルートにある [simple-link-preview@gwin7ok.com.xpi](https://github.com/gwin7ok/Simple-link-preview-gwincust-ForFirefox/raw/main/simple-link-preview@gwin7ok.com.xpi) をダウンロードします。
-2. ダウンロードした `simple-link-preview@gwin7ok.com.xpi` を Firefox のウィンドウにドラッグ＆ドロップします。
-3. 表示されるインストール確認ダイアログで「インストール」をクリックします。
-4. インストール後、ツールバーにアイコンが表示されない場合は拡張機能メニューから該当アドオンをツールバーにピン留めしてください。
+### 方法1: Firefoxで直接開く
+1. 上記のリンクをFirefoxで開く
+2. インストール確認ダイアログでOKを押す
+3. 追加確認ダイアログでOKを押す
+
+### 方法2: ドラッグ&ドロップ
+1. 上記のリンクからXPIファイルをダウンロード
+2. ダウンロードしたXPIファイルをFirefoxウィンドウにドラッグ&ドロップ
+3. インストール確認ダイアログでOKを押す
+4. 追加確認ダイアログでOKを押す
+
+### 方法3: アドオン管理画面から
+1. 上記のリンクからXPIファイルをダウンロード
+2. Firefoxで `about:addons` を開く
+3. 「拡張機能」ページの歯車アイコンをクリックし、「XPIからアドオンをインストール」を選択
+4. ダウンロードしたXPIファイルを選択してインストール
+
+ インストール後、ツールバーにアイコンが表示されない場合は拡張機能メニューから該当アドオンをツールバーにピン留めしてください。
 
 ---
 
