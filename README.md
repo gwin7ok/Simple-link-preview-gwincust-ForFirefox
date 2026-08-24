@@ -68,7 +68,7 @@
 
 リポジトリにはビルド済みの XPI ファイル `simple-link-preview@gwin7ok.com.xpi` が含まれています。最も簡単なインストール方法は、以下の手順です：
 
-1. リポジトリのルートにある `simple-link-preview@gwin7ok.com.xpi` をダウンロードします。
+1. リポジトリのルートにある [simple-link-preview@gwin7ok.com.xpi](simple-link-preview@gwin7ok.com.xpi) をダウンロードします。
   - GitHub 等のホスティングページでは、ファイル名をクリックして保存してください。
 2. ダウンロードした `simple-link-preview@gwin7ok.com.xpi` を Firefox のウィンドウにドラッグ＆ドロップします。
 3. 表示されるインストール確認ダイアログで「インストール」をクリックします。
