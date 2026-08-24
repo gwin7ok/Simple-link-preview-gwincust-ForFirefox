@@ -27,6 +27,10 @@ let preview_icon;
 // 自分より新しいマウスオーバーが発生していないかを判定するために使用する
 let hoverGeneration = 0;
 
+// 現在進行中の短縮URL展開通信を中断するためのコントローラ
+// 新しいマウスオーバーが発生するたびに、前の通信があれば abort() する
+let currentHoverAbortController = null;
+
 // グローバル変数で補助キーの押下状態を管理
 let isModifierKeyPressed = false;
 
@@ -162,6 +166,15 @@ async function on_link_mouseover_doc(event) {
     //   こうすることでリンク以外へ移動した場合も、直前のリンクの非同期処理を無効化できる）
     const myHoverGeneration = ++hoverGeneration;
 
+    // 前のマウスオーバーに紐づく通信が進行中であれば中断する
+    // （短時間に連続して短縮URL展開の通信が飛び、相手サイトから
+    //   too many requests エラーを受けることがあるため、常に最大1本に制限する）
+    if (currentHoverAbortController) {
+        currentHoverAbortController.abort();
+    }
+    currentHoverAbortController = new AbortController();
+    const myAbortController = currentHoverAbortController;
+
     // マウスオーバーした要素がリンクでない場合は処理をスキップ
     const linkElement = event.target.closest('a');
     await debugLog(`マウスオーバーした要素:event.target.nodeName=${event.target.nodeName}, linkElement=${linkElement}`,);
@@ -187,7 +200,7 @@ async function on_link_mouseover_doc(event) {
     }
 
     // 動作条件を満たしている場合のみプレビューを開始
-    await preview_frame._onLinkMouseOver(event, myHoverGeneration);
+    await preview_frame._onLinkMouseOver(event, myHoverGeneration, myAbortController.signal);
 }
 
 // マウスアウト時の処理
@@ -200,6 +213,11 @@ function on_link_mouseout_doc(event) {
     // リンク要素または子要素からのマウスアウトを正確に検出
     const linkElement = event.target.closest('a');
     if (linkElement || event.target.nodeName === 'A') {
+        // リンクから完全に外れる場合も、進行中の通信があれば中断する
+        if (currentHoverAbortController) {
+            currentHoverAbortController.abort();
+        }
+
         debugLog("マウスアウトしたのでcurrentHoverUrlを消去:", preview_frame.previewState.currentHoveredUrl);
         preview_frame._setPreviewState({ currentHoveredUrl: null });
         if (preview_frame.display && !preview_frame.locked) {
@@ -334,7 +352,7 @@ class PreviewFrame {
     }
 
     // マウスオーバー時の処理
-    async _onLinkMouseOver(event, myHoverGeneration) {
+    async _onLinkMouseOver(event, myHoverGeneration, abortSignal) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
             await debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
@@ -347,7 +365,7 @@ class PreviewFrame {
         // 短縮URLを展開
         if (this._isShortenedUrl(url)) {
             await debugLog("短縮URLを検出しました。展開を試みます:", url);
-            url = await resolveShortenedUrl(url);
+            url = await resolveShortenedUrl(url, abortSignal);
             await debugLog("展開されたURL:", url);
 
             // 展開待ちの間に別のリンクへマウスオーバーが移っていた場合は、
@@ -869,11 +887,35 @@ class PreviewIcon {
 
 
 // 短縮URLを展開する関数
-async function resolveShortenedUrl(shortUrl) {
+async function resolveShortenedUrl(shortUrl, signal) {
     return new Promise((resolve) => {
+        // 呼び出された時点で既に中断済みなら、通信すら開始しない
+        if (signal && signal.aborted) {
+            debugLog("中断済みのため通信を開始しません:", shortUrl);
+            resolve(shortUrl);
+            return;
+        }
+
         const req = new XMLHttpRequest();
+
+        // 新しいマウスオーバーが発生した場合に通信自体を中断するためのハンドラ
+        const onAbort = () => {
+            debugLog("resolveShortenedUrl: 中断要求により通信を中断します:", shortUrl);
+            req.abort();
+        };
+        if (signal) {
+            signal.addEventListener('abort', onAbort);
+        }
+
         req.onreadystatechange = () => {
             if (req.readyState === 4) {
+                if (signal) {
+                    signal.removeEventListener('abort', onAbort);
+                }
+
+                // 中断された場合は status が 0 になる。
+                // Content-Type も取得できないため、既存の
+                // 「展開できません」分岐に自然に落ちて安全に終わる。
                 const contentType = req.getResponseHeader("Content-Type");
                 if (contentType === null) {
                     console.warn("展開できません:", shortUrl);
@@ -912,6 +954,9 @@ async function resolveShortenedUrl(shortUrl) {
             req.open('GET', shortUrl, true);
             req.send();
         } catch (error) {
+            if (signal) {
+                signal.removeEventListener('abort', onAbort);
+            }
             console.error("リクエスト中にエラーが発生しました:", error);
             resolve(shortUrl);
         }
