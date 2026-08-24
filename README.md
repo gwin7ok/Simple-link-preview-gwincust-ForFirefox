@@ -68,14 +68,7 @@
 
 リポジトリにはビルド済みの XPI ファイル `simple-link-preview@gwin7ok.com.xpi` が含まれています。最も簡単なインストール方法は、以下の手順です：
 
-1. リポジトリのルートにある [simple-link-preview@gwin7ok.com.xpi](simple-link-preview@gwin7ok.com.xpi) をダウンロードします。
-  - GitHub 等のホスティングページでは、ファイル名をクリックして保存してください。
-  - 直接ダウンロードリンク（GitHub 上の raw 配信）を明示する場合は、リポジトリとブランチに応じて次の形式の URL を使用します：
-    - `https://github.com/<ユーザ名>/<リポジトリ名>/raw/<ブランチ>/simple-link-preview@gwin7ok.com.xpi`
-    - 例（このリポジトリが `gwin7ok/Simple-link-preview-gwincust-ForFirefox`、ブランチが `main` の場合）:
-     - https://github.com/gwin7ok/Simple-link-preview-gwincust-ForFirefox/raw/main/simple-link-preview@gwin7ok.com.xpi
-     - https://raw.githubusercontent.com/gwin7ok/Simple-link-preview-gwincust-ForFirefox/main/simple-link-preview@gwin7ok.com.xpi
-  - 注意: ブラウザやユーザー設定によっては、クリック時に「開く/保存」を尋ねるダイアログ（画像のようなプロンプト）が表示されます。これはブラウザ側の挙動であり、リポジトリ側から完全に制御することはできません。
+1. リポジトリのルートにある [https://github.com/gwin7ok/Simple-link-preview-gwincust-ForFirefox/raw/main/simple-link-preview@gwin7ok.com.xpi](simple-link-preview@gwin7ok.com.xpi) をダウンロードします。
 2. ダウンロードした `simple-link-preview@gwin7ok.com.xpi` を Firefox のウィンドウにドラッグ＆ドロップします。
 3. 表示されるインストール確認ダイアログで「インストール」をクリックします。
 4. インストール後、ツールバーにアイコンが表示されない場合は拡張機能メニューから該当アドオンをツールバーにピン留めしてください。
