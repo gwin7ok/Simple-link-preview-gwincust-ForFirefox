@@ -22,6 +22,11 @@ debugLog("link_preview.js is loaded");
 let preview_frame;
 let preview_icon;
 
+// マウスオーバーのたびに増加する世代カウンタ
+// 非同期処理（短縮URLの展開など）が完了した時点で、
+// 自分より新しいマウスオーバーが発生していないかを判定するために使用する
+let hoverGeneration = 0;
+
 // グローバル変数で補助キーの押下状態を管理
 let isModifierKeyPressed = false;
 
@@ -152,6 +157,11 @@ function getLinkUnderMouse() {
 async function on_link_mouseover_doc(event) {
     if (!SETTINGS.previewEnabled.value) return;
 
+    // このマウスオーバーの世代を記録
+    // （リンク要素かどうかに関わらず、マウスオーバーが発生した時点で必ず更新する。
+    //   こうすることでリンク以外へ移動した場合も、直前のリンクの非同期処理を無効化できる）
+    const myHoverGeneration = ++hoverGeneration;
+
     // マウスオーバーした要素がリンクでない場合は処理をスキップ
     const linkElement = event.target.closest('a');
     await debugLog(`マウスオーバーした要素:event.target.nodeName=${event.target.nodeName}, linkElement=${linkElement}`,);
@@ -177,7 +187,7 @@ async function on_link_mouseover_doc(event) {
     }
 
     // 動作条件を満たしている場合のみプレビューを開始
-    await preview_frame._onLinkMouseOver(event);
+    await preview_frame._onLinkMouseOver(event, myHoverGeneration);
 }
 
 // マウスアウト時の処理
@@ -324,7 +334,7 @@ class PreviewFrame {
     }
 
     // マウスオーバー時の処理
-    async _onLinkMouseOver(event) {
+    async _onLinkMouseOver(event, myHoverGeneration) {
         const linkElement = event.target.closest('a');
         if (!linkElement || !linkElement.href) {
             await debugLog("マウスオーバーした要素が<a>タグではないため、currentHoveredUrl をリセットします:", event.target.nodeName);
@@ -339,6 +349,14 @@ class PreviewFrame {
             await debugLog("短縮URLを検出しました。展開を試みます:", url);
             url = await resolveShortenedUrl(url);
             await debugLog("展開されたURL:", url);
+
+            // 展開待ちの間に別のリンクへマウスオーバーが移っていた場合は、
+            // この（古い）結果は破棄する。currentHoveredUrl 等の状態を
+            // 書き換えたり update()/show() を呼んだりしてはいけない。
+            if (myHoverGeneration !== hoverGeneration) {
+                debugLog("短縮URL展開待ちの間に新しいマウスオーバーが発生したため、古い結果を破棄します:", url);
+                return;
+            }
         }
 
         // 直前のURLと同じ場合でかつアイコンが表示されているときは何もしない
@@ -517,9 +535,17 @@ class PreviewFrame {
         } else {
             debugLog("更新時間経過前後でURLが一致しなかったため、更新をスキップします:", url);
 
-            // 現在のurlで、再度update()を呼び出す
-            debugLog("マウスポインタが移動後に新しいURLをマウスオーバーしているので再度更新を試みます:", url);
-            this.update(url);
+            // 現在マウスオーバーしている実際のURLで、再度update()を呼び出す
+            // （引数の古い url ではなく currentHoveredUrl を使う。
+            //   古い url のまま再試行すると、実際のマウス位置と噛み合わず
+            //   無駄な再スケジュールを繰り返す原因になる）
+            const latestUrl = this.previewState.currentHoveredUrl;
+            if (latestUrl) {
+                debugLog("マウスポインタが移動後に新しいURLをマウスオーバーしているので再度更新を試みます:", latestUrl);
+                this.update(latestUrl);
+            } else {
+                debugLog("現在マウスオーバーしているURLがないため、更新の再試行をスキップします");
+            }
         }
         this.hide(); // 更新後に非表示タイマーを開始
     }
